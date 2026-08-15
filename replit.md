@@ -1,6 +1,6 @@
-# [Project name]
+# SITA Health
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+SITA is a responsive women's health companion for cycle tracking, mood insights, reproductive health modes, and supportive daily check-ins.
 
 ## Run & Operate
 
@@ -22,23 +22,32 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/sita-health/` — the deployable React + Vite frontend.
+- `artifacts/sita-health/src/pages/sita-pages.tsx` — the requested SITA screens and their local interactions.
+- `artifacts/sita-health/src/components/AppShell.tsx` — responsive navigation and shared application shell.
+- `artifacts/sita-health/src/data/mock.ts` — realistic local demo data.
+- `artifacts/sita-health/src/data/store.tsx` — local state model for mode, mood, cycle, chat, and privacy settings.
+- `artifacts/sita-health/src/index.css` — SITA's visual tokens, typography, palette, and responsive utilities.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The first build is intentionally frontend-only with local mock data; backend persistence, authentication, and AI are deferred.
+- Wouter routes each major SITA screen so the primary navigation remains deep-linkable and easy to replace with server-backed flows later.
+- Shared app state lives in a small provider rather than inside individual screens so local interactions can be upgraded to API mutations without redesigning the UI.
+- The responsive shell switches between a desktop rail and mobile bottom navigation while keeping the same five primary destinations.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+SITA provides a warm daily health dashboard, cycle calendar and period logging, mood logging and insights, reproductive health mode selection, pregnancy and postpartum views, a mock SITA chat assistant, and profile/privacy controls.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+The uploaded reference image is the visual source of truth: calm pink, lavender, warm white, rounded cards, soft shadows, botanical details, and a premium mobile-app feel.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- This first build uses local state and realistic demo values; refreshes reset the demo session.
+- The frontend is the source of the current product experience; the existing API server is still only the shared health scaffold.
 
 ## Pointers
 

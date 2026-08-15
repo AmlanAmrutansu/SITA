@@ -1,0 +1,199 @@
+Build the complete frontend foundation for my project:
+
+SITA
+Smart Intelligence for Treatment & Awareness
+
+SITA is a modern women's health platform. The attached image is the PRIMARY visual reference for the entire UI.
+
+Study the reference image carefully and recreate its design language, visual hierarchy, colors, typography, cards, illustrations, navigation, spacing and overall feel.
+
+IMPORTANT:
+Do not make a static copy of the image. Build a REAL responsive web application that adapts beautifully to mobile phones, tablets, laptops and desktop screens.
+
+Use React + TypeScript + Tailwind CSS and clean reusable components.
+
+==================================================
+
+SITA HAS 5 PRIMARY USER FEATURES:
+
+1. Period & Cycle Tracker
+2. Mood Tracker
+3. Unified SITA AI Assistant
+4. Reproductive Health Mode
+   - Not Pregnant
+   - Pregnant
+   - Postpartum
+5. Personal Health Dashboard
+
+==================================================
+
+BUILD THESE SCREENS:
+
+• Welcome / Onboarding
+• Reproductive Health Mode Selection
+• Home Dashboard
+• Period & Cycle Tracker
+• Mood Tracker
+• Mood Insights
+• SITA AI Assistant
+• Pregnancy Mode
+• Postpartum Mode
+• Profile & Privacy
+
+==================================================
+
+DESIGN:
+
+The UI should closely follow the attached reference image.
+
+Use its:
+- Pink/lavender/white visual palette
+- Rounded cards
+- Soft shadows
+- Clean typography
+- Gentle illustrations
+- Modern health-tech aesthetic
+- Calm and premium appearance
+- Mobile-app-like experience
+
+Do not create a generic dashboard.
+
+The design must feel like a polished commercial women's health product.
+
+==================================================
+
+RESPONSIVENESS:
+
+Mobile-first, but fully responsive.
+
+Support:
+360px+
+375px+
+390px+
+414px+
+tablets
+laptops
+desktop
+large desktop screens
+
+Do NOT simply stretch the mobile layout on desktop.
+
+Adapt:
+- Navigation
+- Cards
+- Grids
+- Typography
+- Charts
+- Calendar
+- Spacing
+- Content width
+
+There must be no horizontal scrolling or broken layouts.
+
+==================================================
+
+NAVIGATION:
+
+Mobile bottom navigation:
+
+Home | Cycle | Mood | SITA | Profile
+
+On larger screens, adapt the navigation appropriately while preserving the same structure and visual identity.
+
+Every navigation item must actually work.
+
+==================================================
+
+FUNCTIONAL FRONTEND:
+
+Use realistic mock data for now.
+
+Make the frontend interactions functional:
+
+• Cycle calendar
+• Period logging UI
+• Mood selection
+• Mood logging
+• Mood history
+• Charts/insights
+• Reproductive mode selection
+• Pregnancy dashboard
+• Postpartum dashboard
+• AI chat interface with mock responses
+• Profile/settings interactions
+
+Do NOT hardcode everything directly inside components. Keep mock data organized so it can later be replaced by Supabase data.
+
+==================================================
+
+AI CHAT:
+
+Create the complete SITA chat interface, but DO NOT connect an AI API yet.
+
+It should include:
+- Chat history
+- User messages
+- SITA responses
+- Text input
+- Send button
+- Suggested questions
+- Loading state
+- Empty state
+
+Use mock responses for now.
+
+The final application will later connect this interface to a real AI API.
+
+==================================================
+
+IMPORTANT — DO NOT BUILD YET:
+
+Do NOT implement:
+- Supabase
+- Authentication
+- Real database
+- AI API
+- RAG
+- Vector database
+- Medical screening backend
+- Admin dashboard
+
+Those will be added in later development stages.
+
+==================================================
+
+CODE QUALITY:
+
+Use reusable components and a clean structure.
+
+Keep UI, mock data and business logic reasonably separated.
+
+Use TypeScript.
+
+Avoid unnecessary libraries.
+
+Do not create one giant component.
+
+Make the project easy to extend with Supabase and AI later.
+
+==================================================
+
+FINAL REQUIREMENT:
+
+Build the ENTIRE frontend foundation now, not just the homepage.
+
+Before finishing, check every screen and navigation path and fix:
+- Broken layouts
+- Overflow
+- Inconsistent spacing
+- Broken buttons
+- Mobile responsiveness
+- Desktop responsiveness
+- Missing states
+- Visual inconsistencies
+
+The attached reference image is the SOURCE OF TRUTH for SITA's visual identity.
+
+Do not add random features or redesign the product concept.
+
+Make SITA look like a real premium women's health application.
