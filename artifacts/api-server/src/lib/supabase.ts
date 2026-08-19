@@ -7,9 +7,9 @@ export async function supabaseRequest(
   init: RequestInit = {},
   accessToken?: string,
 ) {
-  const headers = new Headers(init.headers);
-  headers.set("Content-Type", "application/json");
-  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+  const headers: Record<string, string> = Object.fromEntries(new Headers(init.headers).entries());
+  headers["Content-Type"] = "application/json";
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
   return connectors.proxy("supabase", path, { ...init, headers });
 }
 

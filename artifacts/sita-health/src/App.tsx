@@ -6,7 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import { SitaStoreProvider } from '@/data/store';
-import { WelcomePage, ModePage, HomePage, CyclePage, MoodPage, InsightsPage, SitaPage, PregnancyPage, PostpartumPage, ProfilePage } from '@/pages/sita-pages';
+import { WelcomePage, AuthPage, ModePage, HomePage, CyclePage, MoodPage, InsightsPage, SitaPage, PregnancyPage, PostpartumPage, ProfilePage } from '@/pages/sita-pages';
 
 const queryClient = new QueryClient();
 
@@ -14,6 +14,7 @@ function Router() {
   return <RoutedErrorBoundary>
     <Switch>
       <Route path="/welcome" component={WelcomePage} />
+        <Route path="/auth" component={AuthPage} />
       <Route path="/mode" component={ModePage} />
       <Route path="/" component={HomePage} />
       <Route path="/cycle" component={CyclePage} />

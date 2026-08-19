@@ -1,10 +1,11 @@
-import { Bell, CalendarDays, ChevronRight, Home, Menu, MessageCircle, Settings, Smile, Sparkles, UserRound, X } from 'lucide-react';
+import { Baby, Bell, CalendarDays, ChevronRight, Home, Menu, MessageCircle, Settings, Smile, Sparkles, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { navItems } from '@/data/mock';
+import { useSitaStore } from '@/data/store';
 
-const iconMap = { home: Home, calendar: CalendarDays, smile: Smile, sparkles: Sparkles, user: UserRound };
+const iconMap = { home: Home, calendar: CalendarDays, smile: Smile, sparkles: Sparkles, user: UserRound, baby: Baby };
 
 export function SitaLogo({ compact = false }: { compact?: boolean }) {
   return (
@@ -20,13 +21,19 @@ export function SitaLogo({ compact = false }: { compact?: boolean }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { mode } = useSitaStore();
+  const contextualNav = mode === 'pregnant'
+    ? navItems.map((item) => item.href === '/cycle' ? { ...item, href: '/pregnancy', label: 'Pregnancy', icon: 'baby' as const } : item)
+    : mode === 'postpartum'
+      ? navItems.map((item) => item.href === '/cycle' ? { ...item, href: '/postpartum', label: 'Postpartum', icon: 'baby' as const } : item)
+      : navItems;
   return (
     <div className="sita-noise app-shell flex bg-transparent">
       <aside className="desktop-side sticky top-0 hidden h-dvh w-[238px] shrink-0 flex-col border-r border-[#eadce4] bg-[#fffafb]/80 px-5 py-7 backdrop-blur-xl md:flex">
         <SitaLogo />
         <p className="mb-9 mt-3 pl-11 text-[10px] font-semibold uppercase tracking-[.18em] text-[#a88c9f]">Your health companion</p>
         <nav className="space-y-1.5" aria-label="Primary navigation">
-          {navItems.map((item) => {
+          {contextualNav.map((item) => {
             const Icon = iconMap[item.icon];
             const active = item.href === '/' ? location === '/' : location.startsWith(item.href);
             return <Link key={item.href} href={item.href} data-testid={`link-nav-${item.label.toLowerCase()}`} className={`group flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-semibold transition-all ${active ? 'bg-[#f9dce7] text-[#b85779] shadow-sm' : 'text-[#846e80] hover:bg-[#fbf0f4] hover:text-[#b85779]'}`}>
@@ -54,7 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main className="app-content px-4 pb-28 pt-7 sm:px-6 md:px-9 md:pb-12 md:pt-9">{children}</main>
       </div>
       <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[76px] items-center justify-around border-t border-[#eadfe5] bg-[#fffafa]/94 px-2 backdrop-blur-xl md:hidden" aria-label="Mobile navigation">
-        {navItems.map((item) => {
+         {contextualNav.map((item) => {
           const Icon = iconMap[item.icon];
           const active = item.href === '/' ? location === '/' : location.startsWith(item.href);
           return <Link href={item.href} key={item.href} className={`flex min-w-[55px] flex-col items-center gap-1 rounded-xl py-1.5 text-[10px] font-semibold ${active ? 'text-[#c65f83]' : 'text-[#9b8995]'}`} data-testid={`link-mobile-${item.label.toLowerCase()}`}><span className={`grid h-7 w-9 place-items-center rounded-full ${active ? 'bg-[#f7dce6]' : ''}`}><Icon className="h-[17px] w-[17px]" strokeWidth={active ? 2.4 : 1.7} /></span>{item.label}</Link>;

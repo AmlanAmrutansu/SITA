@@ -3,11 +3,11 @@ import { responseJson, supabaseRequest } from "../lib/supabase";
 
 const router: IRouter = Router();
 
-router.post("/chat", async (req: Request, res) => {
+router.post("/chat", async (req: Request, res): Promise<void> => {
   const accessToken = req.cookies?.sita_access_token as string | undefined;
-  if (!accessToken) return res.status(401).json({ message: "Please sign in." });
+  if (!accessToken) { res.status(401).json({ message: "Please sign in." }); return; }
   const text = String(req.body?.text ?? "").trim();
-  if (!text) return res.status(400).json({ message: "Message cannot be empty." });
+  if (!text) { res.status(400).json({ message: "Message cannot be empty." }); return; }
 
   const messagesResponse = await supabaseRequest("/rest/v1/chat_messages?select=role,content&order=created_at.asc&limit=20", { method: "GET" }, accessToken);
   const history = messagesResponse.ok ? await responseJson(messagesResponse) : [];
@@ -22,9 +22,9 @@ router.post("/chat", async (req: Request, res) => {
     body: JSON.stringify({ system_instruction: { parts: [{ text: prompt }] }, contents }),
   });
   const aiData = await aiResponse.json() as any;
-  if (!aiResponse.ok) return res.status(502).json({ message: "SITA is taking a quiet moment. Please try again." });
+  if (!aiResponse.ok) { res.status(502).json({ message: "SITA is taking a quiet moment. Please try again." }); return; }
   const reply = aiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-  if (!reply) return res.status(502).json({ message: "SITA could not form a response." });
+  if (!reply) { res.status(502).json({ message: "SITA could not form a response." }); return; }
 
   await supabaseRequest("/rest/v1/chat_messages", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify([{ role: "user", content: text }, { role: "assistant", content: reply }]) }, accessToken);
   res.json({ reply });

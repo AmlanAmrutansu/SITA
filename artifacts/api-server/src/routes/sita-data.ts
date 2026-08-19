@@ -3,8 +3,10 @@ import { responseJson, supabaseRequest } from "../lib/supabase";
 
 const router: IRouter = Router();
 const access = (req: Request) => req.cookies?.sita_access_token as string | undefined;
+const allowedTables = new Set(["moods", "cycle_logs", "chat_messages"]);
 
 async function proxyTable(req: Request, res: any, table: string, method: string, query = "") {
+  if (!allowedTables.has(table)) { res.status(404).json({ message: "Unknown data collection." }); return; }
   const token = access(req);
   if (!token) return res.status(401).json({ message: "Please sign in to save your health data." });
   const response = await supabaseRequest(`/rest/v1/${table}${query}`, { method, headers: method === "POST" ? { Prefer: "return=representation" } : undefined, body: method === "POST" ? JSON.stringify(req.body) : undefined }, token);

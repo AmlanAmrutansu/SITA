@@ -6,6 +6,7 @@ import { AppShell, SitaLogo } from '@/components/AppShell';
 import { BotanicalMark, SitaAvatar, WellnessIllustration } from '@/components/Illustration';
 import { moods, modeDetails, type MoodEntry, type ReproductiveMode } from '@/data/mock';
 import { useSitaStore } from '@/data/store';
+import { api } from '@/lib/api';
 
 function PageTitle({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: ReactNode }) {
   return <div className="mb-7 flex items-end justify-between gap-4">
@@ -34,8 +35,41 @@ export function WelcomePage() {
       <div className="mx-auto mb-8 flex justify-center fade-up"><SitaLogo /></div>
       <div className="relative mx-auto mb-8 max-w-[340px] overflow-hidden rounded-[2.2rem] bg-[#f7dce5] p-5 card-shadow fade-up fade-up-1"><WellnessIllustration /><div className="absolute left-4 top-5 rounded-full bg-white/70 px-3 py-1 text-[10px] font-bold text-[#b76585]">A quiet place to begin</div></div>
       <div className="fade-up fade-up-2"><p className="mb-3 font-display text-5xl text-[#b75c7f]">SITA</p><p className="mx-auto max-w-[270px] text-sm leading-relaxed text-[#765d70]">Smart Intelligence for<br />Treatment &amp; Awareness</p><p className="mx-auto mt-5 max-w-[270px] text-sm leading-relaxed text-[#8d7585]">Your personal health companion, made for understanding yourself with more ease.</p></div>
-      <button onClick={() => setLocation('/mode')} className="mt-8 flex w-full items-center justify-center gap-3 rounded-full bg-[#e9779d] px-5 py-3.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(213,101,138,.22)] transition hover:-translate-y-0.5" data-testid="button-get-started">Get started <ArrowRight className="h-4 w-4" /></button>
+      <button onClick={() => setLocation('/auth')} className="mt-8 flex w-full items-center justify-center gap-3 rounded-full bg-[#e9779d] px-5 py-3.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(213,101,138,.22)] transition hover:-translate-y-0.5" data-testid="button-get-started">Get started <ArrowRight className="h-4 w-4" /></button>
       <p className="mt-5 text-[11px] text-[#a58d9c]">Private by design. Yours to explore.</p>
+    </div>
+  </div>;
+}
+
+export function AuthPage() {
+  const [, setLocation] = useLocation();
+  const [signup, setSignup] = useState(false);
+  const [name, setName] = useState('Kirti');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  async function submit(event: React.FormEvent) {
+    event.preventDefault(); setBusy(true); setError('');
+    try {
+      const result = signup ? await api.signup(email, password, name) : await api.login(email, password);
+      if (signup && 'needsEmailConfirmation' in result && result.needsEmailConfirmation) setError('Check your email to confirm your account, then sign in.');
+      else setLocation('/mode');
+    } catch (caught) { setError(caught instanceof Error ? caught.message : 'Unable to continue.'); }
+    finally { setBusy(false); }
+  }
+  return <div className="min-h-dvh bg-[#fffafa] px-5 py-8 sm:grid sm:place-items-center">
+    <div className="mx-auto w-full max-w-md">
+      <Link href="/welcome" className="mb-12 inline-flex items-center gap-2 text-xs font-bold text-[#907587]"><ArrowLeft className="h-4 w-4" /> Back</Link>
+      <div className="mb-8"><p className="eyebrow">Your private health space</p><h1 className="font-display text-5xl leading-[.95] text-[#4d394e]">{signup ? 'Begin gently.' : 'Welcome back.'}</h1><p className="mt-4 text-sm leading-relaxed text-[#8d7587]">Your SITA space is private, personal, and yours to return to.</p></div>
+      <form onSubmit={submit} className="rounded-[28px] border border-[#f0e0e8] bg-white p-5 shadow-[0_18px_50px_rgba(89,55,76,.08)]">
+        {signup && <label className="mb-4 block text-xs font-bold text-[#765f71]">Name<input value={name} onChange={e => setName(e.target.value)} className="sita-input mt-2" /></label>}
+        <label className="mb-4 block text-xs font-bold text-[#765f71]">Email<input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="sita-input mt-2" /></label>
+        <label className="block text-xs font-bold text-[#765f71]">Password<input type="password" minLength={6} required value={password} onChange={e => setPassword(e.target.value)} className="sita-input mt-2" /></label>
+        {error && <p className="mt-4 rounded-2xl bg-[#fff0f3] px-3 py-2 text-xs font-semibold text-[#b55778]">{error}</p>}
+        <button disabled={busy} className="mt-6 w-full rounded-full bg-[#e9779d] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-60">{busy ? 'One moment…' : signup ? 'Create my space' : 'Sign in'}</button>
+      </form>
+      <button onClick={() => { setSignup(!signup); setError(''); }} className="mt-5 w-full text-center text-xs font-bold text-[#9b7187]">{signup ? 'Already have an account? Sign in' : 'New to SITA? Create an account'}</button>
     </div>
   </div>;
 }

@@ -14,26 +14,26 @@ function token(req: Request) {
   return req.cookies?.[ACCESS_COOKIE] as string | undefined;
 }
 
-router.get("/auth/session", async (req, res) => {
+router.get("/auth/session", async (req, res): Promise<void> => {
   const accessToken = token(req);
-  if (!accessToken) return res.json({ user: null });
+  if (!accessToken) { res.json({ user: null }); return; }
   const response = await supabaseRequest("/auth/v1/user", { method: "GET" }, accessToken);
-  if (!response.ok) return res.json({ user: null });
+  if (!response.ok) { res.json({ user: null }); return; }
   res.json({ user: await responseJson(response) });
 });
 
-router.post("/auth/signup", async (req, res) => {
+router.post("/auth/signup", async (req, res): Promise<void> => {
   const response = await supabaseRequest("/auth/v1/signup", { method: "POST", body: JSON.stringify({ email: req.body.email, password: req.body.password, data: { display_name: req.body.displayName ?? "Kirti" } }) });
   const data = await responseJson(response);
-  if (!response.ok) return res.status(response.status).json({ message: data?.msg ?? data?.message ?? "Could not create your account." });
+  if (!response.ok) { res.status(response.status).json({ message: data?.msg ?? data?.message ?? "Could not create your account." }); return; }
   if (data?.access_token) setSessionCookies(res, data);
   res.status(201).json({ user: data.user ?? data, needsEmailConfirmation: !data?.access_token });
 });
 
-router.post("/auth/login", async (req, res) => {
+router.post("/auth/login", async (req, res): Promise<void> => {
   const response = await supabaseRequest("/auth/v1/token?grant_type=password", { method: "POST", body: JSON.stringify({ email: req.body.email, password: req.body.password }) });
   const data = await responseJson(response);
-  if (!response.ok) return res.status(response.status).json({ message: data?.error_description ?? data?.msg ?? "Those details did not work." });
+  if (!response.ok) { res.status(response.status).json({ message: data?.error_description ?? data?.msg ?? "Those details did not work." }); return; }
   setSessionCookies(res, data);
   res.json({ user: data.user });
 });
@@ -44,21 +44,21 @@ router.post("/auth/logout", (req, res) => {
   res.status(204).end();
 });
 
-router.get("/me", async (req, res) => {
+router.get("/me", async (req, res): Promise<void> => {
   const accessToken = token(req);
-  if (!accessToken) return res.status(401).json({ message: "Please sign in." });
+  if (!accessToken) { res.status(401).json({ message: "Please sign in." }); return; }
   const response = await supabaseRequest("/rest/v1/profiles?select=*", { method: "GET" }, accessToken);
   const data = await responseJson(response);
-  if (!response.ok) return res.status(response.status).json(data);
+  if (!response.ok) { res.status(response.status).json(data); return; }
   res.json(data?.[0] ?? null);
 });
 
-router.patch("/me", async (req, res) => {
+router.patch("/me", async (req, res): Promise<void> => {
   const accessToken = token(req);
-  if (!accessToken) return res.status(401).json({ message: "Please sign in." });
+  if (!accessToken) { res.status(401).json({ message: "Please sign in." }); return; }
   const response = await supabaseRequest("/rest/v1/profiles?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(req.body) }, accessToken);
   const data = await responseJson(response);
-  if (!response.ok) return res.status(response.status).json(data);
+  if (!response.ok) { res.status(response.status).json(data); return; }
   res.json(data?.[0] ?? data);
 });
 

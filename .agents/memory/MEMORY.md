@@ -1,0 +1,1 @@
+- [Supabase connector boundary](supabase-connector-boundary.md) — keep Supabase proxy calls and session tokens server-side; browser code talks only to the app API.

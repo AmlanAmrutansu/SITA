@@ -1,6 +1,9 @@
 export interface Session {
   user: { id: string; email?: string; user_metadata?: { display_name?: string } } | null;
 }
+export interface SignupResponse extends Session {
+  needsEmailConfirmation?: boolean;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, {
@@ -15,7 +18,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   session: () => request<Session>('/auth/session'),
   login: (email: string, password: string) => request<Session>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  signup: (email: string, password: string, displayName: string) => request<Session & { needsEmailConfirmation?: boolean }>('/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, displayName }) }),
+  signup: (email: string, password: string, displayName: string) => request<SignupResponse>('/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, displayName }) }),
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
   profile: () => request<any>('/me'),
   updateProfile: (profile: Record<string, unknown>) => request<any>('/me', { method: 'PATCH', body: JSON.stringify(profile) }),
