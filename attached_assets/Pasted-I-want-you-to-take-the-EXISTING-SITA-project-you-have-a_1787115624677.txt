@@ -1,0 +1,977 @@
+I want you to take the EXISTING SITA project you have already built and now turn it into the COMPLETE, REAL, FULL-STACK APPLICATION.
+
+Do NOT start a new project.
+
+Do NOT throw away the existing frontend.
+
+Do NOT redesign SITA from scratch.
+
+The existing frontend was created from the reference image I provided earlier. That design is our visual source of truth. Keep the existing visual identity and improve/refine it where necessary, but now make the entire application functional.
+
+I want you to work like a senior full-stack engineer and complete the application end-to-end.
+
+==================================================
+PROJECT
+==================================================
+
+Product Name:
+
+SITA
+
+Full Name:
+
+Smart Intelligence for Treatment & Awareness
+
+SITA is a modern women's health platform designed to help women track their health, understand personal patterns, and receive AI-assisted health information and guidance in one place.
+
+Core philosophy:
+
+"Simple for the user. Intelligent underneath."
+
+The application should feel like a real health-tech product, not a static college-project UI.
+
+==================================================
+VERY IMPORTANT — WHAT I EXPECT
+==================================================
+
+The current project is mostly a frontend/static prototype.
+
+Your job now is to transform it into a REAL working full-stack application.
+
+That means:
+
+Frontend
++
+Authentication
++
+Supabase Database
++
+User-specific data
++
+Backend logic
++
+Health calculations
++
+AI API
++
+Working dashboard
++
+Working cycle tracker
++
+Working mood tracker
++
+Pregnancy/Postpartum functionality
++
+Working profile/settings
++
+Security
++
+Responsive behavior
++
+Error handling
++
+Portable project architecture
+
+I do NOT want fake functionality.
+
+If a button exists, it should perform its intended action.
+
+If data is displayed, it should come from the appropriate application state/database rather than permanently hardcoded mock values.
+
+If AI chat is shown, it should connect to the real AI API.
+
+==================================================
+IMPORTANT: DO NOT IMPLEMENT RAG
+==================================================
+
+Do NOT build RAG at this stage.
+
+Do NOT implement:
+
+- Vector database
+- Embeddings
+- pgvector
+- Medical document ingestion
+- Retrieval pipeline
+- Knowledge-base UI
+- RAG APIs
+
+We may add RAG later if time permits.
+
+However, structure the AI service cleanly so a RAG/retrieval layer can be inserted later without rebuilding SITA.
+
+==================================================
+PRODUCT FEATURES
+==================================================
+
+Keep the product intentionally simple.
+
+SITA has FIVE primary user-facing areas:
+
+1. Period & Cycle Tracker
+2. Mood Tracker
+3. Unified SITA AI Assistant
+4. Reproductive Health Mode
+5. Personal Health Dashboard
+
+Do NOT invent unnecessary additional primary features.
+
+There is NO Admin Dashboard for this version.
+
+==================================================
+1. AUTHENTICATION & REGISTRATION
+==================================================
+
+The existing application needs a proper registration and login experience.
+
+Create a polished registration/onboarding flow consistent with the existing SITA design.
+
+LOGIN:
+
+Allow:
+
+- Email + password
+- Sign in with Google
+
+SIGN UP:
+
+Allow:
+
+- Email + password
+- Sign up with Google
+
+Also provide:
+
+- Logout
+- Session persistence
+- Forgot password/reset password where supported
+- Proper authentication loading states
+- Proper authentication errors
+- Protected application routes
+
+IMPORTANT:
+
+Google authentication must use Supabase Auth.
+
+Do not build a separate custom Google authentication system.
+
+==================================================
+REGISTRATION / ONBOARDING
+==================================================
+
+After a user creates an account, collect the basic information required to personalize SITA.
+
+Include appropriate fields such as:
+
+- Name/display name
+- Age/date of birth
+- Current reproductive-health status
+- Basic cycle information where applicable
+- Typical cycle length
+- Last period where applicable
+- Relevant basic health information needed by SITA
+- General health preferences/goals where useful
+
+Reproductive status:
+
+1. Not Pregnant
+2. Pregnant
+3. Postpartum
+
+IMPORTANT:
+
+This is reproductive-health status, NOT relationship status.
+
+Do not unnecessarily collect sensitive information.
+
+Keep onboarding clear and reasonably short.
+
+If the user signs up with Google, they must still complete the required SITA onboarding information before entering the main application.
+
+==================================================
+2. SUPABASE — REAL BACKEND
+==================================================
+
+Connect SITA to MY Supabase project.
+
+Do NOT create a separate Replit-owned database.
+
+Use environment variables.
+
+Expected configuration should be based on the current Supabase key model and should include the appropriate public/publishable client key and secure server-side credentials.
+
+Never expose secret/service-role credentials in client-side code.
+
+If credentials are not currently available, build the integration around environment variables and clearly identify what is required.
+
+Do not invent credentials.
+
+==================================================
+SUPABASE DATABASE
+==================================================
+
+Create the required PostgreSQL schema for SITA.
+
+Use version-controlled Supabase migration files.
+
+The repository should contain the database migrations so the entire project can later be downloaded, moved to another machine, and recreated without depending on Replit.
+
+Create appropriate tables/entities such as:
+
+profiles
+cycle_logs
+symptom_logs
+mood_logs
+pregnancy_data
+postpartum_data
+screening_sessions
+screening_answers
+screening_results
+health_insights
+ai_conversations
+ai_messages
+
+Only create tables that are actually necessary.
+
+Use:
+
+- UUID primary keys where appropriate
+- Foreign keys
+- created_at / updated_at
+- Appropriate indexes
+- Constraints
+- Proper relationships
+
+Do not put unrelated information into one giant table.
+
+==================================================
+USER DATA ISOLATION — CRITICAL
+==================================================
+
+SITA will have many users.
+
+For example:
+
+User A
+User B
+User C
+User D
+...
+
+Each user must have completely separate health data.
+
+User A must ONLY be able to access User A's:
+
+- Profile
+- Cycles
+- Moods
+- Symptoms
+- Pregnancy/postpartum information
+- Screening data
+- Insights
+- AI conversations
+
+User B must only access User B's information.
+
+Implement proper Supabase Row Level Security.
+
+Do NOT rely only on frontend filtering.
+
+The database itself must enforce authorization.
+
+Test that one authenticated user cannot read, update or delete another user's data.
+
+==================================================
+3. PERIOD & CYCLE TRACKER
+==================================================
+
+Turn the existing Cycle Tracker into a real working feature.
+
+Users should be able to:
+
+- Record period start
+- Record period end
+- Record flow
+- Record cramps
+- Record symptoms
+- View calendar
+- View previous cycles
+- Edit records
+- Delete their own records
+
+The calendar must use actual database data.
+
+Calculate using normal deterministic application code:
+
+- Current cycle day
+- Cycle length
+- Period length
+- Average cycle length
+- Historical cycle trends
+- Basic estimated next period
+
+Do NOT ask the AI to calculate dates or mathematical values.
+
+The dashboard must update when cycle information changes.
+
+The prediction should be presented as an estimate, not a medical certainty.
+
+==================================================
+4. MOOD TRACKER
+==================================================
+
+Turn the existing Mood Tracker into a real database-backed feature.
+
+Allow:
+
+- Mood
+- Stress
+- Energy
+- Sleep quality
+- Optional notes
+
+Mood options should follow the existing SITA design.
+
+Users can:
+
+- Add entries
+- View history
+- Edit their own entries
+- Delete their own entries
+
+Mood Insights should use real user data.
+
+Create charts/trends from actual stored records.
+
+==================================================
+5. PERSONAL HEALTH DASHBOARD
+==================================================
+
+Turn the existing dashboard into a real personalized dashboard.
+
+For a non-pregnant user, show relevant information such as:
+
+- Current cycle
+- Cycle day
+- Cycle phase where appropriate
+- Estimated next period
+- Recent mood
+- Recent symptoms
+- Trends
+- Personalized insights
+- Quick actions
+- "Ask SITA Anything"
+
+For pregnant users, adapt the dashboard to pregnancy.
+
+For postpartum users, adapt it to postpartum recovery.
+
+Do not hardcode the example values from the design reference.
+
+Use actual authenticated user data.
+
+==================================================
+6. REPRODUCTIVE HEALTH MODE
+==================================================
+
+Make the onboarding selection functional.
+
+Modes:
+
+NOT PREGNANT
+PREGNANT
+POSTPARTUM
+
+Save the mode in the user's profile.
+
+The application should adapt its relevant dashboard/content based on the mode.
+
+Allow the user to change it later from Profile.
+
+Changing the mode must update the application correctly without corrupting existing data.
+
+==================================================
+7. PREGNANCY MODE
+==================================================
+
+Make the existing Pregnancy Mode functional.
+
+Support appropriate database-backed information such as:
+
+- Pregnancy week/progress
+- Trimester
+- Symptoms
+- Mood
+- Appointments
+- Kick counter where appropriate
+- Notes
+- Relevant educational information
+
+Do not hardcode the example pregnancy values from the reference image.
+
+Pregnancy information belongs to the authenticated user.
+
+==================================================
+8. POSTPARTUM MODE
+==================================================
+
+Make the existing Postpartum Mode functional.
+
+Support:
+
+- Postpartum week
+- Recovery tracking
+- Bleeding tracking
+- Mood
+- Sleep
+- Activity
+- Symptoms
+- Notes
+- Relevant educational information
+
+Use real user-specific data.
+
+==================================================
+9. UNIFIED SITA AI ASSISTANT
+==================================================
+
+Now connect the existing SITA chat interface to a REAL Gemini API.
+
+Do NOT use fake/mock responses.
+
+Create a clean server-side AI service.
+
+The Gemini API key MUST remain server-side.
+
+Never expose it in frontend JavaScript.
+
+Expected configuration:
+
+GEMINI_API_KEY
+
+Use environment variables and do not hardcode secrets.
+
+==================================================
+AI CONTEXT
+==================================================
+
+SITA should be able to use relevant information from the currently authenticated user's application data.
+
+For example, when appropriate, the AI may receive:
+
+- Current reproductive mode
+- Cycle information
+- Relevant recent symptoms
+- Mood information
+- Pregnancy/postpartum context
+- Relevant screening results
+- Relevant health history stored in SITA
+
+Do not send unnecessary personal information to the AI.
+
+Always verify that the data belongs to the currently authenticated user before providing it to the AI service.
+
+==================================================
+AI CAPABILITIES
+==================================================
+
+The unified SITA AI Assistant should handle:
+
+- General women's health questions
+- Period questions
+- Cycle questions
+- PCOS/hormonal-health screening conversations
+- Symptom discussions
+- Basic symptom triage
+- Mental wellbeing questions
+- Pregnancy questions
+- Postpartum questions
+- Questions about the user's tracked data
+
+Do NOT create separate user-facing chatbot pages for each category.
+
+Everything should happen through the single SITA AI Assistant.
+
+==================================================
+AI SAFETY
+==================================================
+
+SITA is NOT a medical diagnosis system.
+
+The AI must not make definitive diagnostic claims.
+
+For example, do NOT say:
+
+"You have PCOS."
+
+Instead communicate uncertainty appropriately:
+
+"Your responses include symptoms that can be associated with PCOS, but this does not confirm a diagnosis. A healthcare professional can evaluate this further."
+
+The AI should:
+
+- Avoid definitive diagnosis
+- Avoid prescribing medication
+- Avoid inventing medical information
+- Explain uncertainty
+- Encourage professional evaluation when appropriate
+- Escalate potentially concerning symptoms appropriately
+
+==================================================
+10. RULE-BASED HEALTH LOGIC
+==================================================
+
+Do NOT rely entirely on Gemini for deterministic health logic.
+
+Create a separate application/service layer for deterministic logic.
+
+This can handle:
+
+- Cycle calculations
+- Cycle statistics
+- Basic pattern detection
+- Screening scoring
+- Basic symptom-risk classification
+- Triage rules
+
+The rule engine produces structured results.
+
+Gemini then explains those results conversationally.
+
+Example:
+
+User input
+↓
+Rule engine
+↓
+Structured result
+↓
+Gemini
+↓
+Natural-language explanation
+
+This architecture must remain separate from the UI.
+
+==================================================
+11. SCREENING
+==================================================
+
+PCOS/hormonal-health screening should happen inside the SITA AI conversation.
+
+There should NOT be a separate major PCOS application.
+
+SITA can ask structured questions and use deterministic scoring.
+
+The result should be an awareness/screening result, NOT a diagnosis.
+
+Example:
+
+"Your responses show an elevated pattern of symptoms sometimes associated with PCOS. This screening cannot confirm PCOS."
+
+==================================================
+12. SYMPTOM TRIAGE
+==================================================
+
+Symptom triage should also happen through SITA AI.
+
+The AI may ask follow-up questions.
+
+The deterministic rules should help classify the situation into appropriate categories such as:
+
+- Monitor/self-care information
+- Consider contacting a healthcare professional
+- Seek prompt medical evaluation
+
+Do not present these classifications as guaranteed medical diagnoses.
+
+==================================================
+13. PROFILE & PRIVACY
+==================================================
+
+Make the existing Profile & Privacy screen functional.
+
+Include:
+
+- View/update profile
+- Reproductive health mode
+- Cycle settings
+- Health information
+- Logout
+- Data controls
+- Delete data/account where appropriate
+
+Any data-related action must actually work.
+
+Do not leave fake buttons.
+
+==================================================
+14. REAL-TIME / DATA CONSISTENCY
+==================================================
+
+When the user changes data, the UI should immediately reflect the change.
+
+Example:
+
+Log period
+↓
+Save to Supabase
+↓
+Cycle calendar updates
+↓
+Dashboard updates
+↓
+Cycle calculations update
+
+Similarly:
+
+Mood entry
+↓
+Supabase
+↓
+Mood history
+↓
+Mood chart
+↓
+Dashboard
+
+Do not use static mock values once real data is available.
+
+Use Supabase Realtime only where it genuinely improves the experience; do not over-engineer the application.
+
+==================================================
+15. RESPONSIVE DESIGN
+==================================================
+
+Preserve the existing visual design based on the supplied reference image.
+
+However, the application must be genuinely responsive.
+
+Support:
+
+- Small phones
+- Large phones
+- Tablets
+- Laptops
+- Desktop monitors
+- Large screens
+
+Do not simply stretch the mobile design.
+
+Adapt:
+
+- Navigation
+- Cards
+- Grids
+- Calendar
+- Charts
+- Typography
+- Spacing
+- Content width
+
+There must be no horizontal scrolling or broken layouts.
+
+The application should still feel like a premium health application on desktop.
+
+==================================================
+16. PWA
+==================================================
+
+Keep the application portable and installable as a Progressive Web App where practical.
+
+Include appropriate:
+
+- Web manifest
+- Icons/placeholders
+- Mobile viewport configuration
+- App-like behavior
+
+Do not make the application dependent on Replit.
+
+==================================================
+17. PORTABILITY — VERY IMPORTANT
+==================================================
+
+Replit is ONLY the development environment.
+
+SITA must NOT depend on Replit for its runtime, database, authentication, AI or deployment.
+
+The completed project must be portable.
+
+I should be able to:
+
+1. Download/export the project as ZIP.
+2. Extract it on another machine.
+3. Install dependencies.
+4. Configure environment variables.
+5. Run it locally.
+6. Upload the project to GitHub.
+7. Deploy it to another compatible hosting platform.
+
+The application should continue working.
+
+Do NOT use Replit-specific database, authentication or runtime services unless absolutely unavoidable.
+
+Keep the project based on standard technologies and external services:
+
+- React/Next.js
+- Node.js
+- Supabase
+- Gemini API
+- Environment variables
+
+==================================================
+18. ENVIRONMENT VARIABLES
+==================================================
+
+Never hardcode secrets.
+
+Use environment variables.
+
+Provide a safe `.env.example` file showing the required variable names, but NEVER put real secrets into it.
+
+Expected configuration should include the appropriate Supabase public/publishable configuration and secure server-side Supabase credentials, plus:
+
+GEMINI_API_KEY
+
+The exact variable names should be consistent throughout the application.
+
+Client-side variables must only contain values that are safe to expose.
+
+Server-only secrets must remain server-side.
+
+==================================================
+19. DATABASE PORTABILITY
+==================================================
+
+Do not create the database manually only through the Supabase dashboard.
+
+Create version-controlled Supabase migration files in the project.
+
+Example structure:
+
+supabase/
+  migrations/
+    001_initial_schema.sql
+    002_auth_profile.sql
+    003_cycle_tracking.sql
+    004_mood_tracking.sql
+    ...
+
+The migration system should allow the database schema to be recreated on another Supabase project later.
+
+Do NOT destroy existing data or tables blindly.
+
+If a destructive migration is genuinely required, stop and clearly identify it rather than silently deleting data.
+
+==================================================
+20. CODE ARCHITECTURE
+==================================================
+
+Keep the project maintainable.
+
+Use clear separation between:
+
+- UI components
+- Pages/routes
+- Supabase clients
+- Database services
+- Authentication
+- AI service
+- Health/rule engine
+- Data models/types
+- Utilities
+
+Do not create one massive file.
+
+Do not duplicate logic unnecessarily.
+
+Use TypeScript.
+
+Avoid unnecessary packages.
+
+Keep business logic outside UI components wherever practical.
+
+==================================================
+21. ERROR HANDLING
+==================================================
+
+Every important operation needs:
+
+- Loading state
+- Empty state
+- Error state
+- Success feedback
+
+Handle gracefully:
+
+- Authentication failures
+- Database failures
+- Network failures
+- Gemini API failures
+- Invalid form input
+- Unauthorized requests
+- Missing profile data
+
+The application should never expose raw server errors or API keys to users.
+
+==================================================
+22. VISUAL QUALITY
+==================================================
+
+The existing frontend was based on the reference image I supplied.
+
+Preserve it.
+
+Do not replace it with a generic dashboard.
+
+Maintain:
+
+- Soft pink/lavender/white palette
+- Rounded cards
+- Soft shadows
+- Clean typography
+- Calm premium aesthetic
+- Friendly illustrations
+- Consistent iconography
+- Proper spacing
+- Smooth subtle transitions
+
+If you need to improve an existing component to make it functional or responsive, do so without changing the overall SITA visual identity.
+
+==================================================
+23. DO NOT ADD
+==================================================
+
+Do NOT add:
+
+- Admin dashboard
+- Doctor marketplace
+- Online pharmacy
+- Blockchain
+- Fitness platform
+- Unrelated wellness features
+- RAG
+- Vector database
+- Medical document ingestion
+- Separate PCOS application
+- Separate symptom-checker application
+- Separate pregnancy chatbot
+
+Keep the product focused.
+
+==================================================
+24. TESTING & SELF-CHECK
+==================================================
+
+After implementing everything, thoroughly inspect the application.
+
+Test the complete journey:
+
+New user
+↓
+Registration
+↓
+Google/email authentication
+↓
+Onboarding
+↓
+Profile creation
+↓
+Dashboard
+↓
+Cycle logging
+↓
+Mood logging
+↓
+Pregnancy/Postpartum mode
+↓
+SITA AI
+↓
+Profile/settings
+↓
+Logout
+↓
+Login again
+↓
+Verify data persists
+
+Also test multiple users.
+
+Create at least two test users and verify:
+
+User A CANNOT access User B's:
+
+- Profile
+- Cycles
+- Mood
+- Symptoms
+- Pregnancy/Postpartum data
+- Screening results
+- AI conversations
+
+Test RLS and authorization.
+
+Test the application on mobile, tablet and desktop layouts.
+
+Fix obvious bugs before finishing.
+
+==================================================
+25. IMPORTANT — DO NOT CLAIM PERFECTION
+==================================================
+
+Do not simply tell me "everything is working" because the code was generated.
+
+Actually inspect and test the application.
+
+If something cannot be tested because credentials are missing, clearly identify the exact configuration required.
+
+Do not fake successful API/database functionality.
+
+==================================================
+FINAL GOAL
+==================================================
+
+When you finish, I want a COMPLETE SITA application rather than a static design.
+
+The finished application should have:
+
+✓ Real registration
+✓ Email/password authentication
+✓ Google authentication
+✓ Logout
+✓ Persistent sessions
+✓ Real Supabase database
+✓ User-specific data isolation
+✓ RLS security
+✓ Working cycle tracker
+✓ Working mood tracker
+✓ Working dashboard
+✓ Pregnancy mode
+✓ Postpartum mode
+✓ Working profile/settings
+✓ Real Gemini AI assistant
+✓ AI conversation persistence
+✓ Health/rule logic
+✓ Screening support
+✓ Symptom triage support
+✓ Responsive design
+✓ PWA structure
+✓ Proper error handling
+✓ Environment-variable based configuration
+✓ Version-controlled database migrations
+✓ Portable source code
+✓ No Replit-specific dependency for core application functionality
+
+DO NOT IMPLEMENT RAG.
+
+RAG will be added later as an independent retrieval layer.
+
+Most importantly:
+
+Do not discard the existing SITA design.
+
+Turn the current frontend into the real application underneath it.
+
+Work through the existing codebase systematically, inspect what already exists, reuse good components, replace mock functionality with real functionality, and only create new components/services when necessary.
+
+The final result should be a complete, maintainable, portable full-stack SITA application.

@@ -1,0 +1,179 @@
+==================================================
+REPRODUCTIVE MODE — CONDITIONAL UI & FEATURES
+==================================================
+
+The user's selected reproductive-health mode during onboarding must dynamically control which features, buttons, cards and content are visible throughout the application.
+
+Do NOT show all pregnancy/postpartum features to every user.
+
+The application must conditionally render relevant features based on the user's saved reproductive-health mode.
+
+==================================================
+NOT PREGNANT MODE
+==================================================
+
+If the user selects:
+
+NOT PREGNANT
+
+Do NOT show:
+
+- Pregnancy button
+- Pregnancy dashboard
+- Pregnancy-specific cards
+- Pregnancy-specific tracking tools
+
+Instead, the main experience should focus on:
+
+- Period & Cycle Tracker
+- Mood Tracker
+- Personal Health Dashboard
+- SITA AI Assistant
+- Relevant women's-health insights
+
+The dashboard should not contain empty pregnancy cards or disabled pregnancy features.
+
+==================================================
+PREGNANCY MODE
+==================================================
+
+If the user selects:
+
+PREGNANT
+
+Show a dedicated:
+
+"Pregnancy Care" / "Pregnancy" section or button
+
+This section should provide a pregnancy-focused experience including:
+
+- Pregnancy week/progress
+- Trimester
+- Pregnancy timeline
+- Baby development information
+- Pregnancy symptom tracking
+- Mood tracking
+- Nutrition/educational information
+- Appointment tracking
+- Kick counter where appropriate
+- Pregnancy-related health guidance
+- "Ask SITA" for pregnancy-related questions
+- Relevant warning-sign awareness
+
+The pregnancy section should use the user's actual stored pregnancy information.
+
+Do NOT show irrelevant postpartum-specific features as the primary experience.
+
+The existing Period & Cycle and Mood functionality should remain available where appropriate, but the interface should prioritize pregnancy-related information.
+
+==================================================
+POSTPARTUM MODE
+==================================================
+
+If the user selects:
+
+POSTPARTUM
+
+Show a dedicated:
+
+"Postpartum Care" / "Postpartum" section or button
+
+This section should provide a postpartum-focused experience including:
+
+- Postpartum week
+- Recovery progress
+- Bleeding tracking
+- Mood tracking
+- Sleep tracking
+- Activity/recovery tracking
+- Relevant symptoms
+- Recovery information
+- Postpartum wellbeing guidance
+- Feeding-related tracking where appropriate
+- "Ask SITA" for postpartum questions
+- Relevant warning-sign awareness
+
+The postpartum section should use the user's actual stored postpartum information.
+
+Do NOT show pregnancy-specific features as the primary experience.
+
+==================================================
+DYNAMIC NAVIGATION & DASHBOARD
+==================================================
+
+The selected reproductive-health mode must also influence:
+
+- Dashboard cards
+- Quick actions
+- Navigation
+- Available buttons
+- Relevant insights
+- AI context
+- Content displayed on the home screen
+
+For example:
+
+NOT PREGNANT:
+Home
+Cycle
+Mood
+SITA
+Profile
+
+PREGNANT:
+Home
+Pregnancy
+Mood
+SITA
+Profile
+
+POSTPARTUM:
+Home
+Postpartum
+Mood
+SITA
+Profile
+
+The exact navigation may adapt responsively, but the principle must remain:
+
+ONLY show features relevant to the user's current reproductive-health mode.
+
+The user should never see a feature button for a mode they did not select.
+
+==================================================
+MODE CHANGES
+==================================================
+
+The reproductive-health mode must NOT be permanently locked after registration.
+
+Allow the user to change it later from Profile/Settings.
+
+When the mode changes:
+
+1. Save the new mode to Supabase.
+2. Update the user's application context.
+3. Update navigation.
+4. Update dashboard content.
+5. Update visible features.
+6. Update the AI's user context.
+7. Preserve historical data rather than deleting it unnecessarily.
+
+For example:
+
+Pregnant → Postpartum
+
+should transition the experience from Pregnancy Mode to Postpartum Mode while preserving the user's historical pregnancy information.
+
+Similarly, changing from Not Pregnant to Pregnant should activate Pregnancy Mode and its relevant UI.
+
+==================================================
+IMPORTANT UX RULE
+==================================================
+
+Do not merely hide features with CSS.
+
+The application's actual navigation, routes, backend authorization and available actions should respect the user's reproductive-health mode.
+
+The frontend should conditionally render the appropriate experience, while backend logic should still validate that users can only access data belonging to their own account.
+
+The result should feel like SITA is adapting itself to the individual user rather than showing the same application to everyone.
