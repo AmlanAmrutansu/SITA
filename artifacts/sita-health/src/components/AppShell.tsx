@@ -70,13 +70,28 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
         <main className="app-content px-4 pb-28 pt-7 sm:px-6 md:px-9 md:pb-12 md:pt-9">{children}</main>
       </div>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[76px] items-center justify-around border-t border-[#eadfe5] bg-[#fffafa]/94 px-2 backdrop-blur-xl md:hidden" aria-label="Mobile navigation">
+      
+      {/* Liquid Glass Bottom Navigation (Mobile) */}
+      <nav className="fixed bottom-6 left-1/2 z-40 flex h-[68px] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 items-center justify-around rounded-[2rem] border border-white/60 bg-white/40 px-2 shadow-[0_8px_32px_rgba(152,126,145,0.12)] backdrop-blur-2xl md:hidden" aria-label="Mobile navigation">
          {contextualNav.map((item) => {
           const Icon = iconMap[item.icon];
           const active = item.href === '/' ? location === '/' : location.startsWith(item.href);
-          return <Link href={item.href} key={item.href} className={`flex min-w-[55px] flex-col items-center gap-1 rounded-xl py-1.5 text-[10px] font-semibold ${active ? 'text-[#c65f83]' : 'text-[#9b8995]'}`} data-testid={`link-mobile-${item.label.toLowerCase()}`}><span className={`grid h-7 w-9 place-items-center rounded-full ${active ? 'bg-[#f7dce6]' : ''}`}><Icon className="h-[17px] w-[17px]" strokeWidth={active ? 2.4 : 1.7} /></span>{item.label}</Link>;
+          return (
+            <Link 
+              href={item.href} 
+              key={item.href} 
+              className={`flex min-w-[60px] flex-col items-center gap-1.5 rounded-full py-1.5 text-[10px] font-bold transition-all ${active ? 'text-[#8a5d7c]' : 'text-[#a895a5]'}`} 
+              data-testid={`link-mobile-${item.label.toLowerCase()}`}
+            >
+              <span className={`grid h-8 w-11 place-items-center rounded-full transition-all ${active ? 'bg-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)]' : 'bg-transparent'}`}>
+                <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 1.8} />
+              </span>
+              {item.label}
+            </Link>
+          );
         })}
       </nav>
+
       {menuOpen && <div className="fixed inset-0 z-50 bg-[#443347]/20 backdrop-blur-sm md:hidden" onClick={() => setMenuOpen(false)}>
         <div className="ml-auto h-full w-[78%] max-w-[310px] bg-[#fffafa] p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
           <div className="mb-10 flex items-center justify-between"><SitaLogo /><button onClick={() => setMenuOpen(false)} className="rounded-full bg-[#f8edf2] p-2 text-[#8e7184]" data-testid="button-close-menu" aria-label="Close menu"><X className="h-4 w-4" /></button></div>

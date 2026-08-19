@@ -67,7 +67,7 @@ function PageTitle({ eyebrow, title, children }: { eyebrow?: string; title: stri
 
 function Card({ children, className = '', testid }: { children: ReactNode; className?: string; testid?: string }) {
   return (
-    <section className={`rounded-[1.45rem] border border-[#f0e1e8] bg-white/90 p-5 soft-shadow ${className}`} data-testid={testid}>
+    <section className={`rounded-[2rem] border border-white/60 bg-white/50 p-6 shadow-[0_8px_32px_rgba(152,126,145,0.06)] backdrop-blur-xl transition-all ${className}`} data-testid={testid}>
       {children}
     </section>
   );
@@ -469,30 +469,31 @@ export function HomePage() {
       <div className="grid gap-5 lg:grid-cols-[1.35fr_.75fr]">
         <div className="space-y-5">
           {/* Main Cycle Card matching reference design */}
-          <Card className="relative overflow-hidden border-0 bg-[#f8dce6] p-6 sm:p-7" testid="card-cycle-phase">
-            <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-[#efb4c8]/60" />
+          <Card className="relative overflow-hidden border-white/80 bg-gradient-to-br from-[#fcecf1]/90 to-[#fdf8fa]/90 p-7 shadow-[0_8px_32px_rgba(213,101,138,0.12)]" testid="card-cycle-phase">
+            <div className="absolute -right-12 -top-12 h-56 w-56 rounded-full bg-[#f6dce5] opacity-60 blur-3xl" />
+            <div className="absolute -left-12 -bottom-12 h-56 w-56 rounded-full bg-[#faebf0] opacity-60 blur-3xl" />
             <div className="relative">
-              <p className="text-xs font-bold text-[#b25879]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#b25879]">
                 {cycle.hasPeriodData ? `You’re in your ${cycle.phaseTitle}` : 'Cycle Tracking Ready'}
               </p>
-              <p className="mt-2 font-display text-4xl text-[#50394e]">
+              <p className="mt-3 font-display text-[3.5rem] leading-[1.1] text-[#50394e]">
                 {cycle.hasPeriodData ? `Cycle Day ${cycle.currentDay}` : 'Welcome to SITA'}
               </p>
-              <p className="mt-1 text-xs text-[#8b657b]">{cycle.phaseDescription}</p>
+              <p className="mt-2 text-[13px] leading-relaxed text-[#8b657b]">{cycle.phaseDescription}</p>
 
-              <div className="mt-6 flex items-end justify-between">
+              <div className="mt-8 flex items-end justify-between border-t border-[#f4e2e8]/60 pt-6">
                 <div>
-                  <p className="text-[11px] font-medium text-[#a16f84]">Estimated next period</p>
-                  <p className="mt-1 font-display text-2xl font-bold text-[#674657]">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#a16f84]">Estimated next period</p>
+                  <p className="mt-1.5 font-display text-[2rem] font-bold text-[#674657]">
                     {cycle.hasPeriodData ? (
                       <>
-                        {cycle.nextPeriodIn} days <span className="text-xs font-normal text-[#8b657b]">({cycle.nextPeriodDateStr})</span>
+                        {cycle.nextPeriodIn} days <span className="text-sm font-normal text-[#8b657b]">({cycle.nextPeriodDateStr})</span>
                       </>
                     ) : (
-                      <span className="text-base text-[#8b657b]">Tap Log Period below</span>
+                      <span className="text-base font-normal text-[#8b657b]">Tap Log Period below</span>
                     )}
                   </p>
-                  <p className="text-[10px] text-[#a16f84]">
+                  <p className="mt-1 text-[11px] text-[#a16f84]">
                     {cycle.hasPeriodData ? 'Based on your logged pattern' : 'Personalized to your rhythm'}
                   </p>
                 </div>
@@ -513,68 +514,70 @@ export function HomePage() {
 
           {/* 2-Column Summary Cards */}
           <div className="grid grid-cols-2 gap-4">
-            <Card className="bg-[#fff0f4] p-4.5" testid="card-mood-summary">
+            <Card className="rounded-[1.5rem] border border-white/60 bg-white/50 p-4.5 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-md transition hover:bg-white/60" testid="card-mood-summary">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-[11px] font-bold text-[#8d7787]">Mood</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#8d7787]">Mood</span>
                 <Sun className="h-4 w-4 text-[#bd7895]" />
               </div>
               <p className="font-display text-2xl text-[#4b3850]">
                 {latestMood?.mood ? `${latestMood.mood.charAt(0).toUpperCase() + latestMood.mood.slice(1)}` : 'Check in'}
               </p>
-              <Link href="/mood" className="mt-2 inline-block text-[11px] font-semibold text-[#bd7895] hover:underline">
+              <Link href="/mood" className="mt-3 inline-block text-[10px] font-bold text-[#bd7895] transition hover:text-[#9e5d79]">
                 {latestMood ? 'View Details >' : 'Log Mood >'}
               </Link>
             </Card>
 
-            <Card className="bg-[#f1edfa] p-4.5" testid="card-next-period-summary">
+            <Card className="rounded-[1.5rem] border border-white/60 bg-white/50 p-4.5 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-md transition hover:bg-white/60" testid="card-next-period-summary">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-[11px] font-bold text-[#8d7787]">Next Period</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#8d7787]">Next Period</span>
                 <CalendarDays className="h-4 w-4 text-[#8b71af]" />
               </div>
               <p className="font-display text-2xl text-[#4b3850]">
                 {cycle.hasPeriodData ? `${cycle.nextPeriodIn} days` : 'Log Period'}
               </p>
-              <p className="text-[10px] text-[#937b9d]">
+              <p className="text-[10px] font-semibold text-[#937b9d]">
                 {cycle.hasPeriodData ? cycle.nextPeriodDateStr : 'Start tracking'}
               </p>
-              <Link href="/cycle" className="mt-1 inline-block text-[11px] font-semibold text-[#8b71af] hover:underline">
+              <Link href="/cycle" className="mt-1 inline-block text-[10px] font-bold text-[#8b71af] transition hover:text-[#6a528e]">
                 View Calendar &gt;
               </Link>
             </Card>
           </div>
 
           {/* Today's Insight Card */}
-          <Card className="bg-[#f4f0fa]" testid="card-insight">
+          <Card className="border border-white/60 bg-gradient-to-br from-[#f8f5fc]/90 to-[#fdfafb]/90 shadow-sm backdrop-blur-xl" testid="card-insight">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[.15em] text-[#8c78aa]">Today’s insight</p>
+                <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#8c78aa]">Today’s insight</p>
                 <p className="mt-3 max-w-[420px] font-display text-xl leading-snug text-[#584464]">
                   {cycle.hasPeriodData
                     ? `“You are currently in your ${cycle.phaseTitle}. Hormone levels support ${cycle.phase === 'Follicular' ? 'creativity and focused energy' : cycle.phase === 'Menstrual' ? 'gentle rest and restorative self-care' : cycle.phase === 'Ovulatory' ? 'confident communication and peak stamina' : 'steady grounding and nourishing meals' }.”`
                     : '“Welcome to SITA. Logging your daily energy, moods, and cycle milestones builds a deeply personalized picture of your hormonal wellness over time.”'}
                 </p>
               </div>
-              <Sparkles className="h-8 w-8 shrink-0 text-[#a388c9]" />
+              <div className="hidden h-14 w-14 place-items-center rounded-full bg-[#f1ebfa] text-[#8e7bb1] sm:grid shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)]">
+                <Sparkles className="h-6 w-6" />
+              </div>
             </div>
-            <Link href="/insights" className="mt-4 inline-flex items-center text-xs font-bold text-[#8064a2]" data-testid="link-view-insights">
-              Explore your patterns <ArrowRight className="ml-2 h-3.5 w-3.5" />
+            <Link href="/insights" className="mt-6 flex items-center gap-2 text-[11px] font-bold text-[#8064a2] transition hover:text-[#614b7e]" data-testid="link-view-insights">
+              Explore your patterns <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </Card>
         </div>
 
         {/* Right Column: Quick Actions & SITA CTA */}
         <div className="space-y-5">
-          <Card className="bg-white" testid="card-quick-actions">
+          <Card className="border border-white/60 bg-white/40 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-xl" testid="card-quick-actions">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-display text-xl text-[#553f54]">Quick actions</h2>
+              <h2 className="font-display text-[1.4rem] text-[#553f54]">Quick actions</h2>
               <MoreHorizontal className="h-4 w-4 text-[#bca4b2]" />
             </div>
             <div className="grid grid-cols-3 gap-2.5">
               <Link
                 href="/cycle"
-                className="flex min-h-[90px] flex-col items-center justify-center gap-2 rounded-2xl bg-[#fff0f4] p-2 transition hover:-translate-y-0.5 hover:shadow-sm"
+                className="flex min-h-[90px] flex-col items-center justify-center gap-2 rounded-[1.2rem] bg-white/60 p-2 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/80"
               >
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#c76b8b] shadow-xs">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#c76b8b] shadow-[0_4px_12px_rgba(199,107,139,0.15)]">
                   <Droplets className="h-5 w-5" />
                 </span>
                 <span className="text-[10px] font-bold text-[#816d7c]">Log Period</span>
@@ -582,9 +585,9 @@ export function HomePage() {
 
               <Link
                 href="/mood"
-                className="flex min-h-[90px] flex-col items-center justify-center gap-2 rounded-2xl bg-[#fff5e8] p-2 transition hover:-translate-y-0.5 hover:shadow-sm"
+                className="flex min-h-[90px] flex-col items-center justify-center gap-2 rounded-[1.2rem] bg-white/60 p-2 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/80"
               >
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#ca9960] shadow-xs">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#ca9960] shadow-[0_4px_12px_rgba(202,153,96,0.15)]">
                   <Sun className="h-5 w-5" />
                 </span>
                 <span className="text-[10px] font-bold text-[#816d7c]">Log Mood</span>
@@ -592,9 +595,9 @@ export function HomePage() {
 
               <button
                 onClick={() => setSymptomModalOpen(true)}
-                className="flex min-h-[90px] flex-col items-center justify-center gap-2 rounded-2xl bg-[#f2eefb] p-2 transition hover:-translate-y-0.5 hover:shadow-sm"
+                className="flex min-h-[90px] flex-col items-center justify-center gap-2 rounded-[1.2rem] bg-white/60 p-2 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/80"
               >
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#8871ac] shadow-xs">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#8871ac] shadow-[0_4px_12px_rgba(136,113,172,0.15)]">
                   <Sparkles className="h-5 w-5" />
                 </span>
                 <span className="text-[10px] font-bold text-[#816d7c]">Add Symptom</span>
@@ -604,21 +607,22 @@ export function HomePage() {
             {/* Purple SITA CTA Button matching image */}
             <Link
               href="/sita"
-              className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-full bg-[#755998] py-3.5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(117,89,152,.25)] transition hover:bg-[#684c8a] hover:-translate-y-0.5"
+              className="mt-6 flex w-full items-center justify-center gap-2.5 rounded-full bg-[#5d4662] py-4 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(93,70,98,.25)] transition hover:-translate-y-1 hover:bg-[#4a364e]"
             >
-              <Sparkles className="h-4 w-4" /> Ask SITA Anything
+              <Sparkles className="h-4 w-4" /> Ask SITA AI
             </Link>
           </Card>
 
           {/* Soft Note Card */}
-          <Card className="relative overflow-hidden bg-[#eaf3eb]" testid="card-soft-note">
+          <Card className="relative overflow-hidden border border-white/60 bg-gradient-to-br from-[#f1f8f2]/90 to-[#f9fbf9]/90 shadow-sm backdrop-blur-xl" testid="card-soft-note">
             <div className="relative z-10 max-w-[240px]">
-              <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#75977d]">A note for today</p>
-              <p className="mt-3 font-display text-2xl leading-tight text-[#496851]">
+              <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#75977d]">A note for today</p>
+              <p className="mt-3 font-display text-[1.4rem] leading-tight text-[#496851]">
                 Your body is giving you information, not a test to pass.
               </p>
             </div>
-            <Leaf className="absolute -bottom-2 -right-2 h-28 w-28 rotate-[15deg] text-[#8fb69a]/40" strokeWidth={1} />
+            <Leaf className="absolute -bottom-2 -right-2 h-28 w-28 rotate-[15deg] text-[#8fb69a]/20" strokeWidth={1} />
+            <div className="absolute -right-4 -bottom-4 h-32 w-32 rounded-full bg-[#dcf2e1] opacity-50 blur-2xl" />
           </Card>
         </div>
       </div>
@@ -754,7 +758,7 @@ export function CyclePage() {
       <PageTitle eyebrow={monthYearLabel} title="Cycle Tracker">
         <button
           onClick={() => setCurrentDate(new Date())}
-          className="grid h-10 w-10 place-items-center rounded-full border border-[#eddfe6] bg-white text-[#a26f87] shadow-sm hover:bg-[#fff0f4]"
+          className="grid h-10 w-10 place-items-center rounded-full border border-white/60 bg-white/50 text-[#a26f87] shadow-[0_2px_8px_rgba(162,111,135,0.12)] backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/80"
           data-testid="button-cycle-calendar"
           aria-label="Jump to current month"
         >
@@ -764,22 +768,22 @@ export function CyclePage() {
 
       <div className="grid gap-5 lg:grid-cols-[1.3fr_.7fr]">
         {/* Calendar Card */}
-        <Card testid="card-cycle-calendar">
-          <div className="mb-5 flex items-center justify-between">
-            <button onClick={prevMonth} className="rounded-full p-2 text-[#9b7b8e] hover:bg-[#fff0f4]" data-testid="button-previous-month" aria-label="Previous Month">
+        <Card className="border border-white/60 bg-white/40 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-xl" testid="card-cycle-calendar">
+          <div className="mb-6 flex items-center justify-between">
+            <button onClick={prevMonth} className="rounded-full bg-white/50 p-2 text-[#9b7b8e] shadow-sm backdrop-blur-md transition hover:bg-white/80" data-testid="button-previous-month" aria-label="Previous Month">
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <h2 className="font-display text-lg text-[#594354]" data-testid="text-current-month">{monthYearLabel}</h2>
-            <button onClick={nextMonth} className="rounded-full p-2 text-[#9b7b8e] hover:bg-[#fff0f4]" data-testid="button-next-month" aria-label="Next Month">
+            <h2 className="font-display text-xl text-[#594354]" data-testid="text-current-month">{monthYearLabel}</h2>
+            <button onClick={nextMonth} className="rounded-full bg-white/50 p-2 text-[#9b7b8e] shadow-sm backdrop-blur-md transition hover:bg-white/80" data-testid="button-next-month" aria-label="Next Month">
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="mb-3 grid grid-cols-7 text-center text-[10px] font-bold uppercase tracking-wide text-[#b39aa8]">
+          <div className="mb-4 grid grid-cols-7 text-center text-[10px] font-bold uppercase tracking-widest text-[#b39aa8]">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => <span key={d}>{d}</span>)}
           </div>
 
-          <div className="grid grid-cols-7 gap-y-2">
+          <div className="grid grid-cols-7 gap-y-3">
             {calendarData.flatMap((week, wi) =>
               week.map((day, di) => {
                 if (day === null) return <span key={`${wi}-${di}`} className="h-10" />;
@@ -793,11 +797,11 @@ export function CyclePage() {
                 const isFertile = cycle.hasPeriodData && day >= cycle.fertileWindowStart && day <= cycle.fertileWindowEnd;
                 const isOvulation = cycle.hasPeriodData && day === cycle.ovulationDay;
 
-                let badgeClass = 'text-[#715d6c] hover:bg-[#fff0f4]';
-                if (isPeriod) badgeClass = 'bg-[#e981a1] text-white shadow-sm font-bold';
-                else if (isPredicted) badgeClass = 'bg-[#e4d7f5] text-[#715891] font-semibold';
-                else if (isToday) badgeClass = 'border-2 border-[#b19ad0] bg-[#f3effa] text-[#836ba5] font-bold';
-                else if (isFertile) badgeClass = 'bg-[#faf0f7] text-[#936683]';
+                let badgeClass = 'text-[#715d6c] hover:bg-white/60';
+                if (isPeriod) badgeClass = 'bg-gradient-to-br from-[#eb86a5] to-[#de678a] text-white shadow-md font-bold';
+                else if (isPredicted) badgeClass = 'bg-[#e4d7f5]/70 text-[#715891] font-semibold backdrop-blur-sm';
+                else if (isToday) badgeClass = 'border border-[#b19ad0] bg-white/80 text-[#836ba5] font-bold shadow-sm';
+                else if (isFertile) badgeClass = 'bg-gradient-to-br from-[#fdf6fa] to-[#f7ebf2] text-[#936683] shadow-sm';
 
                 return (
                   <button
@@ -878,15 +882,15 @@ export function CyclePage() {
           </Card>
 
           {/* Cycle Summary Card */}
-          <Card testid="card-cycle-summary">
-            <h2 className="font-display text-xl text-[#594354]">Cycle Summary</h2>
-            <div className="mt-4 grid grid-cols-2 gap-4 border-t border-[#f2e6eb] pt-4">
+          <Card className="border border-white/60 bg-gradient-to-br from-[#f8f5fc]/90 to-[#fdfafb]/90 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-xl" testid="card-cycle-summary">
+            <h2 className="font-display text-[1.4rem] text-[#553f54]">Cycle Summary</h2>
+            <div className="mt-5 grid grid-cols-2 gap-4 border-t border-[#f2e6eb] pt-5">
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-[#9a8492]">Cycle Length</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#9a8492]">Cycle Length</p>
                 <p className="mt-1 font-display text-2xl text-[#665064]">{cycle.averageCycleLength} days</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-[#9a8492]">Period Length</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#9a8492]">Period Length</p>
                 <p className="mt-1 font-display text-2xl text-[#665064]">{cycle.periodLength} days</p>
               </div>
             </div>
@@ -895,7 +899,7 @@ export function CyclePage() {
           {/* Log Period Button */}
           <button
             onClick={() => handleToggleDay(selectedDay)}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-[#e9779d] py-3.5 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-[#d65f8a] py-4 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(214,95,138,0.25)] transition hover:-translate-y-1 hover:bg-[#bd4e75]"
             data-testid="button-log-period"
           >
             {isSelectedPeriod ? 'Remove today’s period' : 'Log today’s period'} <Plus className="h-4 w-4" />
@@ -1023,7 +1027,7 @@ export function MoodPage() {
       </PageTitle>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_.75fr]">
-        <Card testid="card-mood-form">
+        <Card className="border border-white/60 bg-gradient-to-br from-[#fcf9fc]/90 to-[#fdfafc]/90 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-xl" testid="card-mood-form">
           <p className="mb-4 text-xs font-semibold text-[#8d7787]">Choose your current mood</p>
           <div className="grid grid-cols-5 gap-2 sm:gap-3">
             {moodOptions.map((mood) => {
@@ -1033,7 +1037,7 @@ export function MoodPage() {
                   key={mood.label}
                   onClick={() => setSelected(mood.label)}
                   className={`flex flex-col items-center gap-2 rounded-2xl p-3 transition ${
-                    active ? 'bg-[#fff0f4] ring-2 ring-[#e982a1] shadow-sm scale-105' : 'hover:bg-[#fcf5f7]'
+                    active ? 'bg-white/80 ring-2 ring-[#e982a1] shadow-sm scale-105 border border-white/60' : 'bg-white/40 hover:bg-white/60 shadow-sm backdrop-blur-sm border border-white/40'
                   }`}
                   data-testid={`button-mood-${mood.label.toLowerCase().replace(' ', '-')}`}
                 >
@@ -1095,7 +1099,7 @@ export function MoodPage() {
                 max="24"
                 value={sleepHours}
                 onChange={(e) => setSleepHours(e.target.value)}
-                className="sita-input w-24 text-center"
+                className="sita-input w-24 text-center bg-white/60 border border-white/40 shadow-sm backdrop-blur-sm"
                 placeholder="Hours"
               />
               <span className="text-xs text-[#8d7787]">hours</span>
@@ -1105,7 +1109,7 @@ export function MoodPage() {
                 max="59"
                 value={sleepMinutes}
                 onChange={(e) => setSleepMinutes(e.target.value)}
-                className="sita-input w-24 text-center"
+                className="sita-input w-24 text-center bg-white/60 border border-white/40 shadow-sm backdrop-blur-sm"
                 placeholder="Mins"
               />
               <span className="text-xs text-[#8d7787]">mins</span>
@@ -1121,7 +1125,7 @@ export function MoodPage() {
               id="mood-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="min-h-20 w-full resize-none rounded-2xl border border-[#eddee6] bg-[#fffafb] p-3 text-xs text-[#665064] outline-none transition focus:border-[#df88a3] focus:ring-2 focus:ring-[#f4d7e1]"
+              className="min-h-20 w-full resize-none rounded-2xl border border-white/60 bg-white/40 shadow-sm backdrop-blur-sm p-3 text-xs text-[#665064] outline-none transition focus:border-white/80 focus:bg-white/60"
               placeholder="Anything you want to remember about today?"
               data-testid="input-mood-note"
             />
@@ -1129,7 +1133,7 @@ export function MoodPage() {
 
           <button
             onClick={save}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#e9779d] py-3.5 text-xs font-bold text-white transition hover:-translate-y-0.5"
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#d65f8a] py-4 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(214,95,138,0.25)] transition hover:-translate-y-1 hover:bg-[#bd4e75]"
             data-testid="button-save-mood"
           >
             {saved ? <><Check className="h-4 w-4" /> Saved Entry</> : <>Save Entry <ArrowRight className="h-4 w-4" /></>}
@@ -1138,27 +1142,27 @@ export function MoodPage() {
 
         {/* Right Context Cards */}
         <div className="space-y-5">
-          <Card className="bg-[#f3eef9]" testid="card-mood-context">
-            <div className="flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#987cb6] shadow-xs">
-                <BedDouble className="h-5 w-5" />
+          <Card className="border border-[#e7e1f2]/60 bg-gradient-to-br from-[#f3eef9]/90 to-[#f9f5fd]/90 shadow-sm backdrop-blur-md" testid="card-mood-context">
+            <div className="flex items-center gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/60 text-[#987cb6] shadow-sm backdrop-blur-sm border border-white/60">
+                <BedDouble className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[#9179ad]">Sleep Quality</p>
-                <p className="mt-1 font-display text-2xl text-[#594464]">{sleepHours}h {sleepMinutes}m</p>
+                <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#9179ad]">Sleep Quality</p>
+                <p className="mt-1 font-display text-[1.6rem] leading-tight text-[#594464]">{sleepHours}h {sleepMinutes}m</p>
               </div>
             </div>
-            <p className="mt-5 text-xs leading-relaxed text-[#806f8f]">
+            <p className="mt-5 text-[13px] leading-relaxed text-[#806f8f]">
               Your rest has been trending a little steadier this week. That is worth noticing.
             </p>
           </Card>
 
-          <Card testid="card-mood-prompt">
-            <p className="text-[11px] font-bold uppercase tracking-[.15em] text-[#b17b96]">A soft prompt</p>
-            <p className="mt-3 font-display text-2xl leading-snug text-[#573f50]">
+          <Card className="border border-white/60 bg-white/40 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-xl" testid="card-mood-prompt">
+            <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#b17b96]">A soft prompt</p>
+            <p className="mt-3 font-display text-[1.4rem] leading-snug text-[#573f50]">
               What would make the next hour feel 5% kinder?
             </p>
-            <Wind className="mt-5 h-5 w-5 text-[#b68caa]" />
+            <Wind className="mt-6 h-6 w-6 text-[#b68caa]/60" />
           </Card>
         </div>
       </div>
@@ -1215,20 +1219,20 @@ export function InsightsPage() {
       <PageTitle eyebrow="Your patterns, with care" title="Mood Insights" />
 
       <div className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
-        <Card testid="card-mood-chart">
+        <Card className="border border-white/60 bg-gradient-to-br from-[#f8f5fc]/90 to-[#fdfafb]/90 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-xl" testid="card-mood-chart">
           {/* Metric Selector Pills matching reference image */}
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#f1e5ec] pb-4">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-white/40 pb-4">
             <div>
-              <h2 className="font-display text-xl text-[#594354]">Your {metric.toLowerCase()} rhythm</h2>
+              <h2 className="font-display text-[1.4rem] text-[#594354]">Your {metric.toLowerCase()} rhythm</h2>
               <p className="mt-0.5 text-[11px] text-[#a18a98]">Logged pattern overview</p>
             </div>
-            <div className="flex gap-1 rounded-full bg-[#f6eff9] p-1">
+            <div className="flex gap-1 rounded-full bg-white/50 p-1 shadow-sm backdrop-blur-sm border border-white/60">
               {(['Mood', 'Stress', 'Energy', 'Sleep'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setMetric(tab)}
                   className={`rounded-full px-3 py-1.5 text-[10px] font-bold transition ${
-                    metric === tab ? 'bg-white text-[#8b6baa] shadow-sm' : 'text-[#b09daa] hover:text-[#7d5d9e]'
+                    metric === tab ? 'bg-white text-[#8b6baa] shadow-[0_2px_4px_rgba(139,107,170,0.15)]' : 'text-[#b09daa] hover:text-[#7d5d9e]'
                   }`}
                 >
                   {tab}
@@ -1238,7 +1242,7 @@ export function InsightsPage() {
           </div>
 
           {/* SVG Line / Bar Chart */}
-          <div className="relative h-56 w-full overflow-hidden rounded-2xl bg-[#fcf9fc] px-4 pt-6 flex flex-col justify-end">
+          <div className="relative h-56 w-full overflow-hidden rounded-[1.2rem] bg-white/60 px-4 pt-6 flex flex-col justify-end shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] border border-white/40">
             <div className="absolute inset-x-4 top-10 border-t border-dashed border-[#eee2ef]" />
             <div className="absolute inset-x-4 top-24 border-t border-dashed border-[#eee2ef]" />
             <div className="absolute inset-x-4 top-38 border-t border-dashed border-[#eee2ef]" />
@@ -1248,7 +1252,7 @@ export function InsightsPage() {
                 {chartPoints.map((pt, i) => (
                   <div key={i} className="flex flex-col items-center gap-2">
                     <div
-                      className="w-3.5 rounded-full bg-[#c0acd9] transition-all hover:bg-[#e982a1]"
+                      className="w-3.5 rounded-full bg-gradient-to-t from-[#e4d4ee] to-[#c7b5d1] transition-all hover:bg-[#e982a1] shadow-sm"
                       style={{ height: `${Math.max(8, pt.val * 11)}px` }}
                       title={`${pt.label}: ${pt.val}`}
                     />
@@ -1259,10 +1263,10 @@ export function InsightsPage() {
             ) : (
               <div className="relative z-10 flex flex-col items-center justify-center pb-12 text-center">
                 <Sun className="h-8 w-8 text-[#d8c2d3]" />
-                <p className="mt-2 text-xs font-semibold text-[#7c6676]">No {metric.toLowerCase()} logs recorded yet</p>
+                <p className="mt-2 text-[13px] font-semibold text-[#7c6676]">No {metric.toLowerCase()} logs recorded yet</p>
                 <Link
                   href="/mood"
-                  className="mt-3 rounded-full bg-[#e9779d] px-4 py-1.5 text-[11px] font-bold text-white shadow-xs hover:bg-[#db698f]"
+                  className="mt-3 rounded-full bg-[#d65f8a] px-5 py-2 text-[11px] font-bold text-white shadow-[0_4px_12px_rgba(214,95,138,0.25)] hover:-translate-y-0.5 transition"
                 >
                   Log today’s mood
                 </Link>
@@ -1271,9 +1275,9 @@ export function InsightsPage() {
           </div>
 
           {/* AI Insight Card matching image */}
-          <div className="mt-6 rounded-2xl bg-[#fff0f4] p-4.5 border border-[#f3d9e2]">
-            <p className="text-[11px] font-bold uppercase tracking-[.15em] text-[#b8738e]">Pattern Insight</p>
-            <p className="mt-2 text-xs leading-relaxed text-[#6e586c]">
+          <div className="mt-6 rounded-[1.2rem] bg-[#fff0f4]/80 p-5 border border-white/60 shadow-sm backdrop-blur-md">
+            <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#b8738e]">Pattern Insight</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-[#6e586c]">
               {chartPoints.length >= 3
                 ? `You have logged ${moodEntries.length} check-ins. Your ${metric.toLowerCase()} patterns show gentle fluctuations across your cycle phases. Keep logging to refine your hormonal correlations.`
                 : 'Logging your mood, energy, and sleep daily allows SITA to generate individualized phase-correlated hormonal insights.'}
@@ -1283,31 +1287,31 @@ export function InsightsPage() {
 
         {/* Right: Mood Records List */}
         <div className="space-y-5">
-          <Card testid="card-mood-records">
+          <Card className="border border-white/60 bg-white/40 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-xl" testid="card-mood-records">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-xl text-[#594354]">Mood Records</h2>
+              <h2 className="font-display text-[1.4rem] text-[#594354]">Mood Records</h2>
               <Link href="/mood" className="text-xs font-bold text-[#b86486]" data-testid="link-add-mood">
                 Add <Plus className="ml-1 inline h-3 w-3" />
               </Link>
             </div>
-            <div className="mt-4 space-y-1">
+            <div className="mt-5 space-y-2">
               {moodEntries.slice(0, 6).map((entry) => (
                 <div
                   key={entry.id}
-                  className="flex items-center justify-between border-b border-[#f2e7ec] py-3 last:border-0"
+                  className="flex items-center justify-between rounded-[1rem] bg-white/60 px-4 py-3 shadow-sm backdrop-blur-md border border-white/40"
                   data-testid={`row-mood-${entry.id}`}
                 >
-                  <span className="text-xs text-[#967f8e]">{entry.date}</span>
+                  <span className="text-xs font-semibold text-[#967f8e]">{entry.date}</span>
                   <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-[#f4eef9] px-2.5 py-1 text-[11px] font-bold text-[#7a5d97]">
+                    <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-bold text-[#7a5d97] shadow-sm">
                       {entry.mood}
                     </span>
                     <button
                       onClick={() => deleteMood(entry.id)}
-                      className="rounded-full p-1 text-[#c2acbb] hover:bg-[#ffebee] hover:text-[#d35f85]"
+                      className="rounded-full p-1.5 text-[#c2acbb] shadow-sm backdrop-blur-sm transition hover:bg-white hover:text-[#d35f85]"
                       aria-label="Delete entry"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
                 </div>
@@ -1449,10 +1453,10 @@ export function SitaPage() {
 
       <Card className="mx-auto flex min-h-[650px] max-w-[850px] flex-col overflow-hidden border border-white/60 bg-white/40 p-0 shadow-[0_8px_32px_rgba(152,126,145,0.08)] backdrop-blur-2xl" testid="card-chat">
         {/* Header */}
-        <div className="flex items-center gap-3 border-b border-white/50 bg-white/30 px-5 py-4 backdrop-blur-md">
+        <div className="flex items-center gap-4 border-b border-white/60 bg-white/40 px-6 py-5 shadow-sm backdrop-blur-md">
           <SitaAvatar />
           <div>
-            <p className="text-sm font-bold tracking-wide text-[#5c4657]">SITA</p>
+            <p className="text-[13px] font-bold tracking-widest uppercase text-[#5c4657]">SITA</p>
             <p className="text-[10px] font-semibold text-[#a28c99]">Your personal health companion</p>
           </div>
         </div>
@@ -1465,10 +1469,10 @@ export function SitaPage() {
               <div key={message.id} className={`flex gap-3 ${isUser ? 'justify-end' : ''}`} data-testid={`message-${message.id}`}>
                 {!isUser && <SitaAvatar small />}
                 <div
-                  className={`max-w-[82%] px-5 py-4 text-[13px] leading-relaxed shadow-sm backdrop-blur-md ${
+                  className={`max-w-[82%] px-5 py-4 text-[13px] leading-relaxed shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-md border ${
                     isUser
-                      ? 'rounded-[20px] rounded-br-md border border-[#f9dce5] bg-[#fdf5f8] text-[#785468]'
-                      : 'rounded-[20px] rounded-bl-md border border-[#ebe4f5] bg-[#f8f5fc] text-[#5e4c6e]'
+                      ? 'rounded-[1.2rem] rounded-br-sm border-white/60 bg-gradient-to-br from-[#fcf9fc]/90 to-[#fdfafc]/90 text-[#785468]'
+                      : 'rounded-[1.2rem] rounded-bl-sm border-white/60 bg-white/40 text-[#5e4c6e]'
                   }`}
                 >
                   <p className="whitespace-pre-line">{message.text}</p>
@@ -1480,7 +1484,7 @@ export function SitaPage() {
           {sending && (
             <div className="flex items-center gap-3 text-xs text-[#99879a]">
               <SitaAvatar small />
-              <div className="rounded-[20px] rounded-bl-md border border-[#ebe4f5] bg-[#f8f5fc] px-5 py-3 shadow-sm backdrop-blur-md">
+              <div className="rounded-[1.2rem] rounded-bl-sm border border-white/60 bg-white/40 px-5 py-3 shadow-sm backdrop-blur-md">
                 <span className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#c3a4d3]" style={{ animationDelay: '0ms' }} />
                   <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#c3a4d3]" style={{ animationDelay: '150ms' }} />
@@ -1492,7 +1496,7 @@ export function SitaPage() {
         </div>
 
         {/* Suggestion Pills */}
-        <div className="border-t border-white/50 bg-white/20 px-4 py-4 backdrop-blur-md sm:px-7">
+        <div className="border-t border-white/50 bg-white/30 px-4 py-5 backdrop-blur-md sm:px-7">
           <div className="mb-4 flex flex-wrap gap-2">
             {suggestions.map((sug) => (
               <button
@@ -1502,7 +1506,7 @@ export function SitaPage() {
                   else if (sug.includes('Triage')) setTriageOpen(true);
                   else send(sug);
                 }}
-                className="rounded-full border border-white/60 bg-white/40 px-3.5 py-1.5 text-[10px] font-bold text-[#8a709d] shadow-sm backdrop-blur-md transition hover:bg-white/70"
+                className="rounded-full border border-white/60 bg-white/50 px-4 py-2 text-[10px] font-bold text-[#8a709d] shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)] backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/80"
               >
                 {sug}
               </button>
@@ -1510,7 +1514,7 @@ export function SitaPage() {
           </div>
 
           {/* Input Box matching reference design */}
-          <div className="flex items-center gap-2 rounded-full border border-white/80 bg-white/60 p-1.5 pl-5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] backdrop-blur-md transition-all focus-within:border-[#c99ab5] focus-within:ring-4 focus-within:ring-[#f9ebf1]">
+          <div className="flex items-center gap-2 rounded-[1.2rem] border border-white/80 bg-white/70 p-2 pl-5 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] backdrop-blur-md transition-all focus-within:border-white focus-within:bg-white/90 focus-within:ring-4 focus-within:ring-[#f9ebf1]/60">
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -1522,7 +1526,7 @@ export function SitaPage() {
             <button
               onClick={() => send()}
               disabled={!text.trim() || sending}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#5d4662] text-white shadow-sm transition hover:bg-[#4a364e] disabled:opacity-40"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-[1rem] bg-gradient-to-br from-[#80647c] to-[#5d4662] text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md disabled:opacity-40 disabled:hover:translate-y-0"
               data-testid="button-send-message"
               aria-label="Send message"
             >
@@ -1530,7 +1534,7 @@ export function SitaPage() {
             </button>
           </div>
 
-          <p className="mt-3 text-center text-[9px] uppercase tracking-widest text-[#a895a5]">
+          <p className="mt-4 text-center text-[9px] uppercase tracking-[0.2em] text-[#a895a5]">
             SITA provides supportive health information, not medical diagnosis.
           </p>
         </div>
@@ -1678,27 +1682,29 @@ export function PregnancyPage() {
       <div className="grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
         <div className="space-y-5">
           {/* Baby Size Card matching reference image */}
-          <Card className="overflow-hidden bg-[#f2ecfa] p-0" testid="card-pregnancy-hero">
+          <Card className="overflow-hidden border border-white/60 bg-gradient-to-br from-[#f2ecfa]/90 to-[#f9f5fd]/90 p-0 shadow-[0_8px_32px_rgba(213,101,138,0.06)] backdrop-blur-xl" testid="card-pregnancy-hero">
             <WellnessIllustration type="pregnancy" />
-            <div className="p-6">
-              <p className="text-[11px] font-bold uppercase tracking-[.15em] text-[#917aa9]">
+            <div className="relative p-6">
+              <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#917aa9]">
                 Week {stats.weeks} • Day {stats.days} 🌸
               </p>
-              <p className="mt-2 font-display text-3xl text-[#594365]">
+              <p className="mt-2 font-display text-[2.2rem] leading-tight text-[#594365]">
                 Baby is the size of a {stats.babySizeItem} {stats.babySizeEmoji}
               </p>
-              <p className="mt-2 text-xs leading-relaxed text-[#82718d]">
+              <p className="mt-2 text-[13px] leading-relaxed text-[#82718d]">
                 Approx. {stats.babyLength} long and {stats.babyWeight}. Your body is working hard. Give it room for rest, hydration, and small moments of joy.
               </p>
             </div>
           </Card>
 
           {/* Tip Card */}
-          <Card testid="card-pregnancy-tip" className="bg-[#eaf3eb]">
-            <div className="flex gap-3">
-              <Sparkles className="mt-1 h-5 w-5 shrink-0 text-[#769b7d]" />
+          <Card className="border border-white/60 bg-gradient-to-br from-[#eaf3eb]/90 to-[#f2f9f3]/90 shadow-sm backdrop-blur-md" testid="card-pregnancy-tip">
+            <div className="flex gap-4">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/60 text-[#769b7d] shadow-sm">
+                <Sparkles className="h-5 w-5" />
+              </span>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[.15em] text-[#73967a]">Today’s Tip</p>
+                <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#73967a]">Today’s Tip</p>
                 <p className="mt-1.5 text-sm font-semibold leading-relaxed text-[#4f6d55]">
                   Stay hydrated and take short walks. Your body will thank you! 💖
                 </p>
@@ -1708,9 +1714,9 @@ export function PregnancyPage() {
         </div>
 
         {/* Right: Care Toolkit matching 6 tiles in image */}
-        <Card testid="card-pregnancy-tools">
-          <h2 className="font-display text-xl text-[#594354]">Your Care Toolkit</h2>
-          <div className="mt-4 grid grid-cols-2 gap-3">
+        <Card className="border border-white/60 bg-white/40 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-xl" testid="card-pregnancy-tools">
+          <h2 className="font-display text-[1.4rem] text-[#594354]">Your Care Toolkit</h2>
+          <div className="mt-5 grid grid-cols-2 gap-3">
             {[
               ['Timeline', CalendarDays, () => setActiveModal('Timeline')],
               ['Symptoms', Thermometer, () => setActiveModal('Symptoms')],
@@ -1722,18 +1728,18 @@ export function PregnancyPage() {
               <button
                 key={label}
                 onClick={action}
-                className="flex min-h-[92px] flex-col items-center justify-center gap-2 rounded-2xl bg-[#fcf8fd] p-3 text-[#816a98] transition hover:bg-[#ede5f7] hover:scale-102"
+                className="flex min-h-[92px] flex-col items-center justify-center gap-2 rounded-[1.2rem] bg-white/60 p-3 text-[#816a98] shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/80"
                 data-testid={`button-pregnancy-${label.toLowerCase().replace(' ', '-')}`}
               >
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#f0e9f7]">
-                  <Icon className="h-4.5 w-4.5" />
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f0e9f7] shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)]">
+                  <Icon className="h-5 w-5" />
                 </span>
                 <span className="text-[10px] font-bold">{label}</span>
               </button>
             ))}
           </div>
 
-          <p className="mt-6 rounded-2xl bg-[#fff5eb] p-4 text-[11px] leading-relaxed text-[#946f5e]">
+          <p className="mt-6 rounded-2xl bg-[#fff5eb] p-4 text-[11px] leading-relaxed text-[#946f5e] shadow-sm">
             Every pregnancy is different. Please contact your healthcare professional with any symptoms or changes that feel unusual.
           </p>
         </Card>
@@ -1913,24 +1919,26 @@ export function PostpartumPage() {
       <div className="grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
         <div className="space-y-5">
           {/* Postpartum Hero Card matching reference image */}
-          <Card className="overflow-hidden bg-[#f9e6eb] p-0" testid="card-postpartum-hero">
+          <Card className="overflow-hidden border border-white/60 bg-gradient-to-br from-[#f9e6eb]/90 to-[#fdf4f7]/90 p-0 shadow-[0_8px_32px_rgba(213,101,138,0.06)] backdrop-blur-xl" testid="card-postpartum-hero">
             <WellnessIllustration type="postpartum" />
-            <div className="p-6">
-              <p className="text-[11px] font-bold uppercase tracking-[.15em] text-[#b3728b]">
+            <div className="relative p-6">
+              <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#b3728b]">
                 You’re doing amazing, {displayName}! 💖
               </p>
-              <p className="mt-2 font-display text-3xl text-[#594052]">Week {stats.weeks}</p>
-              <p className="mt-2 text-xs leading-relaxed text-[#886f7e]">
+              <p className="mt-2 font-display text-[2.2rem] leading-tight text-[#594052]">Week {stats.weeks}</p>
+              <p className="mt-2 text-[13px] leading-relaxed text-[#886f7e]">
                 {stats.stage}. {stats.advice}
               </p>
             </div>
           </Card>
 
           {/* Emergency Warning Card */}
-          <Card className="bg-[#fff5eb]" testid="card-postpartum-note">
-            <div className="flex gap-3">
-              <HeartPulse className="mt-1 h-5 w-5 shrink-0 text-[#c67f78]" />
-              <p className="text-xs font-semibold leading-relaxed text-[#795a5f]">
+          <Card className="border border-[#fcebe8]/60 bg-gradient-to-br from-[#fff5eb]/90 to-[#fffaf5]/90 shadow-sm backdrop-blur-md" testid="card-postpartum-note">
+            <div className="flex gap-4">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/60 text-[#c67f78] shadow-sm">
+                <HeartPulse className="h-5 w-5" />
+              </span>
+              <p className="text-[13px] font-semibold leading-relaxed text-[#795a5f]">
                 If you have a high fever, severe headache, heavy bleeding soaking &gt;2 pads/hr, or feel unsafe, contact your healthcare professional right away.
               </p>
             </div>
@@ -1939,8 +1947,8 @@ export function PostpartumPage() {
 
         {/* Right: Recovery Check-in & Helpful Tools */}
         <div className="space-y-5">
-          <Card testid="card-recovery-checkin">
-            <h2 className="font-display text-xl text-[#594354]">Track Your Recovery</h2>
+          <Card className="border border-white/60 bg-white/40 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-xl" testid="card-recovery-checkin">
+            <h2 className="font-display text-[1.4rem] text-[#594354]">Track Your Recovery</h2>
             <p className="mt-1 text-xs text-[#a08b98]">A quick check-in for today</p>
 
             <div className="mt-5 grid grid-cols-2 gap-3">
@@ -1955,15 +1963,15 @@ export function PostpartumPage() {
                   <button
                     key={label}
                     onClick={() => setSelectedCheckin(label)}
-                    className={`flex min-h-[93px] flex-col items-center justify-center gap-2 rounded-2xl transition ${
+                    className={`flex min-h-[93px] flex-col items-center justify-center gap-2 rounded-[1.2rem] transition shadow-sm backdrop-blur-sm ${
                       isSelected
-                        ? 'bg-[#f9e2ea] ring-2 ring-[#e3a0b5] text-[#9e7184]'
-                        : 'bg-[#fffafb] hover:bg-[#fff0f4] text-[#9e7184]'
+                        ? 'bg-gradient-to-br from-[#f9e2ea] to-[#fdf0f4] ring-2 ring-[#e3a0b5] text-[#9e7184]'
+                        : 'bg-white/60 hover:bg-white/80 text-[#9e7184]'
                     }`}
                     data-testid={`button-recovery-${label.toLowerCase()}`}
                   >
-                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#f9e5ed]">
-                      <Icon className="h-4.5 w-4.5" />
+                    <span className={`grid h-10 w-10 place-items-center rounded-xl shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] ${isSelected ? 'bg-white/80' : 'bg-[#f9e5ed]'}`}>
+                      <Icon className="h-5 w-5" />
                     </span>
                     <span className="text-[10px] font-bold">{label}</span>
                   </button>
@@ -1973,7 +1981,7 @@ export function PostpartumPage() {
 
             <button
               onClick={handleSaveCheckin}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[#e9779d] py-3 text-xs font-bold text-white transition hover:-translate-y-0.5"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#d65f8a] py-4 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(214,95,138,0.25)] transition hover:-translate-y-1 hover:bg-[#bd4e75]"
               data-testid="button-save-recovery"
             >
               {savedFeedback ? <><Check className="h-4 w-4" /> Check-in saved</> : 'Save today’s check-in'}
@@ -1981,22 +1989,26 @@ export function PostpartumPage() {
           </Card>
 
           {/* Helpful Tools Card matching reference image */}
-          <Card testid="card-postpartum-tools">
-            <h2 className="font-display text-lg text-[#594354]">Helpful Tools</h2>
-            <div className="mt-3 grid grid-cols-2 gap-3">
+          <Card className="border border-white/60 bg-white/40 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-xl" testid="card-postpartum-tools">
+            <h2 className="font-display text-[1.4rem] text-[#594354]">Helpful Tools</h2>
+            <div className="mt-4 grid grid-cols-2 gap-3">
               <button
                 onClick={() => setActiveTool('Pelvic Floor')}
-                className="flex flex-col items-center gap-2 rounded-2xl bg-[#f6effb] p-3.5 text-[#8666a4] transition hover:bg-[#eee2f7]"
+                className="flex flex-col items-center justify-center gap-2 rounded-[1.2rem] bg-white/60 p-4 min-h-[96px] text-[#8666a4] shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/80"
               >
-                <Activity className="h-5 w-5" />
-                <span className="text-[11px] font-bold text-center">Pelvic Floor Exercises</span>
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f6effb] shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)]">
+                  <Activity className="h-5 w-5" />
+                </span>
+                <span className="text-[11px] font-bold text-center">Pelvic Floor</span>
               </button>
               <button
                 onClick={() => setActiveTool('Nutrition')}
-                className="flex flex-col items-center gap-2 rounded-2xl bg-[#edf6ef] p-3.5 text-[#63936c] transition hover:bg-[#e0f1e2]"
+                className="flex flex-col items-center justify-center gap-2 rounded-[1.2rem] bg-white/60 p-4 min-h-[96px] text-[#63936c] shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/80"
               >
-                <Utensils className="h-5 w-5" />
-                <span className="text-[11px] font-bold text-center">Nutrition Guide</span>
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#edf6ef] shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)]">
+                  <Utensils className="h-5 w-5" />
+                </span>
+                <span className="text-[11px] font-bold text-center">Nutrition</span>
               </button>
             </div>
           </Card>
@@ -2119,21 +2131,21 @@ export function ProfilePage() {
 
       <div className="grid gap-5 lg:grid-cols-[.85fr_1.15fr]">
         {/* User Card matching reference image */}
-        <Card testid="card-profile-summary">
+        <Card className="border border-white/60 bg-gradient-to-br from-[#fcf9fc]/90 to-[#fdfafc]/90 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-xl" testid="card-profile-summary">
           <div className="flex items-center gap-4">
-            <div className="grid h-16 w-16 place-items-center rounded-full bg-[#f3dce6] text-xl font-bold text-[#b85d80] shadow-inner">
+            <div className="grid h-16 w-16 place-items-center rounded-full bg-white/80 text-xl font-bold text-[#b85d80] shadow-[0_2px_8px_rgba(213,101,138,0.12)]">
               {displayName.charAt(0)}
             </div>
             <div>
-              <h2 className="font-display text-2xl text-[#584153]">{displayName}</h2>
-              <p className="mt-0.5 text-xs text-[#9b8492]">View and manage your profile</p>
+              <h2 className="font-display text-[1.6rem] leading-tight text-[#584153]">{displayName}</h2>
+              <p className="mt-0.5 text-[11px] text-[#9b8492]">View and manage your profile</p>
             </div>
             <button
               onClick={() => {
                 setName(displayName);
                 setEditProfileOpen(true);
               }}
-              className="ml-auto rounded-full p-2 text-[#a48898] hover:bg-[#fff0f4]"
+              className="ml-auto rounded-full bg-white/50 p-2 text-[#a48898] shadow-sm backdrop-blur-sm transition hover:bg-white/80"
               data-testid="button-edit-profile"
               aria-label="Edit Profile"
             >
@@ -2141,28 +2153,28 @@ export function ProfilePage() {
             </button>
           </div>
 
-          <div className="mt-6 rounded-2xl bg-[#f5eff9] p-4">
+          <div className="mt-6 rounded-2xl bg-white/60 p-4 shadow-sm backdrop-blur-md border border-white/40">
             <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#917aa9]">Current Health Mode</p>
             <div className="mt-2 flex items-center justify-between">
-              <span className="text-sm font-semibold text-[#67506f]">{modeDetails[mode].title}</span>
+              <span className="text-[13px] font-semibold text-[#67506f]">{modeDetails[mode].title}</span>
               <Link href="/mode" className="text-[11px] font-bold text-[#8b6ba7] hover:underline" data-testid="link-change-mode">
                 Change
               </Link>
             </div>
           </div>
 
-          <div className="mt-6 border-t border-[#f0e3ea] pt-5">
+          <div className="mt-6 border-t border-[#f0e3ea]/60 pt-5">
             {signedIn ? (
               <button
                 onClick={signOut}
-                className="flex w-full items-center justify-center gap-2 rounded-full border border-[#edd7e3] py-2.5 text-xs font-bold text-[#966b86] hover:bg-[#fff1f5]"
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-white/60 bg-white/40 py-3 text-[13px] font-bold text-[#966b86] shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/80"
               >
                 <LogOut className="h-4 w-4" /> Sign Out
               </button>
             ) : (
               <Link
                 href="/auth"
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#e9779d] py-2.5 text-xs font-bold text-white shadow-xs"
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#d65f8a] py-4 text-[13px] font-bold text-white shadow-[0_8px_20px_rgba(214,95,138,0.25)] transition hover:-translate-y-1 hover:bg-[#bd4e75]"
               >
                 <UserCheck className="h-4 w-4" /> Sign In / Create Account
               </Link>
@@ -2340,8 +2352,8 @@ export function ProfilePage() {
 
 function SettingSection({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-[1.35rem] border border-[#f0e1e8] bg-white/90 px-5 soft-shadow">
-      <div className="flex items-center gap-2 border-b border-[#f1e6eb] py-4">
+    <section className="rounded-[1.35rem] border border-white/60 bg-white/40 px-5 shadow-sm backdrop-blur-md">
+      <div className="flex items-center gap-2 border-b border-white/40 py-4">
         <span className="text-[#ba7b98] [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
         <h2 className="text-xs font-bold uppercase tracking-[.12em] text-[#866d7d]">{title}</h2>
       </div>
@@ -2352,7 +2364,7 @@ function SettingSection({ title, icon, children }: { title: string; icon: ReactN
 
 function SettingRow({ label, detail, children }: { label: string; detail: string; children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#f4ebef] py-4 last:border-0">
+    <div className="flex items-center justify-between gap-3 border-b border-white/40 py-4 last:border-0">
       <div>
         <p className="text-xs font-semibold text-[#665064]">{label}</p>
         <p className="mt-0.5 text-[10px] text-[#a18c98]">{detail}</p>

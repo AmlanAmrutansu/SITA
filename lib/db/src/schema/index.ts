@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, boolean, date, timestamptz, jsonb, numeric } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, integer, boolean, date, timestamp, jsonb, numeric } from "drizzle-orm/pg-core";
 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(),
@@ -12,8 +12,8 @@ export const profiles = pgTable("profiles", {
   lastPeriodDate: date("last_period_date"),
   healthNotes: text("health_notes"),
   notificationPreferences: jsonb("notification_preferences"),
-  createdAt: timestamptz("created_at").notNull().defaultNow(),
-  updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const cycleLogs = pgTable("cycle_logs", {
@@ -26,7 +26,7 @@ export const cycleLogs = pgTable("cycle_logs", {
   symptoms: text("symptoms").array(),
   mood: text("mood"),
   notes: text("notes"),
-  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const moods = pgTable("moods", {
@@ -38,7 +38,7 @@ export const moods = pgTable("moods", {
   sleep: text("sleep").default("7h 20m"),
   note: text("note"),
   loggedAt: date("logged_at").notNull().defaultNow(),
-  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const symptomLogs = pgTable("symptom_logs", {
@@ -49,7 +49,7 @@ export const symptomLogs = pgTable("symptom_logs", {
   severity: text("severity"),
   loggedAt: date("logged_at").notNull().defaultNow(),
   notes: text("notes"),
-  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const pregnancyData = pgTable("pregnancy_data", {
@@ -58,11 +58,11 @@ export const pregnancyData = pgTable("pregnancy_data", {
   pregnancyStartDate: date("pregnancy_start_date"),
   dueDate: date("due_date"),
   kickCount: integer("kick_count").default(0),
-  lastKickTime: timestamptz("last_kick_time"),
+  lastKickTime: timestamp("last_kick_time"),
   appointments: jsonb("appointments"),
   symptoms: text("symptoms").array(),
   notes: text("notes"),
-  updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const postpartumData = pgTable("postpartum_data", {
@@ -75,7 +75,7 @@ export const postpartumData = pgTable("postpartum_data", {
   activityLevel: text("activity_level"),
   kegelCount: integer("kegel_count").default(0),
   notes: text("notes"),
-  updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const screeningSessions = pgTable("screening_sessions", {
@@ -86,7 +86,7 @@ export const screeningSessions = pgTable("screening_sessions", {
   structuredResult: jsonb("structured_result").notNull(),
   riskLevel: text("risk_level"),
   summaryExplanation: text("summary_explanation"),
-  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const healthInsights = pgTable("health_insights", {
@@ -95,15 +95,15 @@ export const healthInsights = pgTable("health_insights", {
   type: text("type").notNull(),
   title: text("title").notNull(),
   insightText: text("insight_text").notNull(),
-  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const aiConversations = pgTable("ai_conversations", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull(),
   title: text("title").notNull().default("Health Companion Chat"),
-  createdAt: timestamptz("created_at").notNull().defaultNow(),
-  updatedAt: timestamptz("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const chatMessages = pgTable("chat_messages", {
@@ -113,5 +113,5 @@ export const chatMessages = pgTable("chat_messages", {
   role: text("role").notNull(),
   content: text("content").notNull(),
   metadata: jsonb("metadata"),
-  createdAt: timestamptz("created_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });

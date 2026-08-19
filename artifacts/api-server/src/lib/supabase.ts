@@ -1,6 +1,15 @@
-import { ReplitConnectors } from "@replit/connectors-sdk";
+let connectors: any = null;
 
-export const connectors = new ReplitConnectors();
+async function getConnectors() {
+  if (connectors) return connectors;
+  try {
+    const { ReplitConnectors } = await import("@replit/connectors-sdk");
+    connectors = new ReplitConnectors();
+  } catch (e) {
+    // Ignore error if not in Replit
+  }
+  return connectors;
+}
 
 export async function supabaseRequest(
   path: string,
@@ -28,23 +37,27 @@ export async function supabaseRequest(
       const targetUrl = `${supabaseUrl}${path.startsWith("/") ? path : `/${path}`}`;
       return await fetch(targetUrl, { ...init, headers });
     } catch (err) {
-      console.warn("[SITA Supabase] Direct fetch failed, trying connector fallback:", err);
+      console.warn("[SITA Supabase] Direct fetch failed:", err);
     }
   }
 
   // 2. Connector Proxy fallback
-  try {
-    return await connectors.proxy("supabase", path, { ...init, headers });
-  } catch (err) {
-    console.error("[SITA Supabase] Connection error:", err);
-    return new Response(
-      JSON.stringify({
-        message:
-          "Supabase service is temporarily unavailable. Please check your network or credentials.",
-      }),
-      { status: 503, headers: { "Content-Type": "application/json" } },
-    );
+  const c = await getConnectors();
+  if (c) {
+    try {
+      return await c.proxy("supabase", path, { ...init, headers });
+    } catch (err) {
+      console.error("[SITA Supabase] Connection error via connector:", err);
+    }
   }
+
+  return new Response(
+    JSON.stringify({
+      message:
+        "Supabase service is temporarily unavailable. Please check your network or credentials.",
+    }),
+    { status: 503, headers: { "Content-Type": "application/json" } },
+  );
 }
 
 export async function responseJson(response: Response) {
