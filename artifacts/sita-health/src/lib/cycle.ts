@@ -14,6 +14,9 @@ export interface CycleSummary {
   fertileWindowEnd: number;
   ovulationDay: number;
   isTodayPeriod: boolean;
+  predictedPeriodDates: string[];
+  fertileWindowDates: string[];
+  ovulationDateStr: string | null;
 }
 
 export function parseDate(dateStr: string): Date {
@@ -113,10 +116,41 @@ export function calculateCycleSummary(
   }
 
   const todayStr = formatDate(today);
+  const predictedPeriodDates: string[] = [];
+  const fertileWindowDates: string[] = [];
+  let ovulationDateStr: string | null = null;
+
+  if (hasPeriodData && lastPeriodStart) {
+    // Ovulation is ~14 days before next period
+    const expectedNextPeriodStart = new Date(lastPeriodStart);
+    expectedNextPeriodStart.setDate(lastPeriodStart.getDate() + cycleLength);
+    
+    // Fill predicted period dates (next 5 days)
+    for(let i = 0; i < periodLength; i++) {
+       const d = new Date(expectedNextPeriodStart);
+       d.setDate(expectedNextPeriodStart.getDate() + i);
+       predictedPeriodDates.push(formatDate(d));
+    }
+    
+    // Fill fertile window
+    const expectedOvulation = new Date(expectedNextPeriodStart);
+    expectedOvulation.setDate(expectedNextPeriodStart.getDate() - 14);
+    ovulationDateStr = formatDate(expectedOvulation);
+    
+    for(let i = -5; i <= 1; i++) {
+       const d = new Date(expectedOvulation);
+       d.setDate(expectedOvulation.getDate() + i);
+       fertileWindowDates.push(formatDate(d));
+    }
+  }
+
   const isTodayPeriod = sortedDates.includes(todayStr);
 
   return {
     hasPeriodData,
+    predictedPeriodDates,
+    fertileWindowDates,
+    ovulationDateStr,
     currentDay,
     averageCycleLength: cycleLength,
     periodLength,

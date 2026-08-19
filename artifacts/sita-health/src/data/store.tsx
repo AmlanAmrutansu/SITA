@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { initialChat, initialMoodEntries, type ChatMessage, type Mood, type MoodEntry, type ReproductiveMode } from './mock';
+import { type ChatMessage, type Mood, type MoodEntry, type ReproductiveMode } from './mock';
 import { api, type Profile, type PCOSScreeningInput, type PCOSScreeningResult, type SymptomTriageInput, type SymptomTriageResult } from '@/lib/api';
 
 export interface CycleLogItem {
@@ -182,9 +182,16 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
         );
       }
 
+      const pDates = new Set<string>();
       if (cyclesData && cyclesData.length > 0) {
         setCycleLogs(cyclesData);
-        setPeriodDateStrings(cyclesData.map((c: any) => c.period_date));
+        cyclesData.forEach((c: any) => pDates.add(c.period_date));
+      }
+      if (profileData?.last_period_date) {
+        pDates.add(profileData.last_period_date);
+      }
+      if (pDates.size > 0) {
+        setPeriodDateStrings(Array.from(pDates));
       }
 
       if (symptomsData && symptomsData.length > 0) {
@@ -468,6 +475,13 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
     setSignedIn(false);
     setUser(null);
     setProfile(null);
+    setPeriodDateStrings([]);
+    setCycleLogs([]);
+    setMoodEntries([]);
+    setSymptomLogs([]);
+    setPregnancyData(defaultPregnancyData);
+    setPostpartumData(defaultPostpartumData);
+    setMessages(welcomeChat);
   };
 
   const exportData = () => {

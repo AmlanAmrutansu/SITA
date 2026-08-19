@@ -46,11 +46,11 @@ import {
   Wind,
   X,
 } from 'lucide-react';
-import { AppShell, SitaLogo } from '@/components/AppShell';
+import { AppShell, SitaLogo, OriginalSitaMark } from '@/components/AppShell';
 import { SitaAvatar, WellnessIllustration } from '@/components/Illustration';
-import { moods, modeDetails, type MoodEntry, type ReproductiveMode } from '@/data/mock';
+import { moods, modeDetails, type MoodEntry, type ReproductiveMode, type Mood } from '@/data/mock';
 import { useSitaStore, type CycleLogItem } from '@/data/store';
-import { api, type PCOOSScreeningInput, type SymptomTriageInput } from '@/lib/api';
+import { api, type PCOSScreeningInput, type SymptomTriageInput } from '@/lib/api';
 import { calculateCycleSummary, calculatePregnancyStats, calculatePostpartumStats, formatDate } from '@/lib/cycle';
 
 function PageTitle({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: ReactNode }) {
@@ -95,38 +95,54 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean; onClose:
 // ==========================================
 export function WelcomePage() {
   const [, setLocation] = useLocation();
-  const { signedIn } = useSitaStore();
 
   return (
-    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-[#faf7f9] px-5 py-10">
-      <div className="absolute -left-20 top-10 h-[28rem] w-[28rem] rounded-full bg-[#fce8ef] opacity-60 blur-[100px]" />
-      <div className="absolute -right-24 bottom-10 h-[30rem] w-[30rem] rounded-full bg-[#ebe4f5] opacity-60 blur-[120px]" />
-      <div className="relative z-10 w-full max-w-[440px] text-center">
-        <div className="mx-auto mb-10 flex justify-center fade-up"><SitaLogo /></div>
-        <div className="relative mx-auto mb-10 max-w-[340px] overflow-hidden rounded-[2.5rem] border border-white/60 bg-white/40 p-5 shadow-[0_8px_32px_rgba(152,126,145,0.08)] backdrop-blur-2xl fade-up fade-up-1">
-          <WellnessIllustration />
-          <div className="absolute left-7 top-7 rounded-full border border-white/50 bg-white/80 px-3.5 py-1.5 text-[9px] font-bold uppercase tracking-widest text-[#9f6a80] shadow-sm backdrop-blur-md">
-            A quiet place to begin
-          </div>
+    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-[#faf7f9] px-6 py-12 selection:bg-[#fce8ef] selection:text-[#5d4662]">
+      <div className="absolute -left-32 top-[-10%] h-[40rem] w-[40rem] animate-pulse rounded-full bg-[#fce8ef] opacity-50 blur-[120px] duration-[8000ms]" />
+      <div className="absolute -right-32 bottom-[-10%] h-[45rem] w-[45rem] animate-pulse rounded-full bg-[#ebe4f5] opacity-50 blur-[140px] duration-[10000ms]" />
+      
+      <div className="relative z-10 flex w-full max-w-[480px] flex-col items-center text-center">
+        <div className="fade-up mb-8 flex justify-center">
+          <OriginalSitaMark className="h-28 w-28 drop-shadow-[0_12px_24px_rgba(212,100,137,0.15)]" />
         </div>
-        <div className="fade-up fade-up-2">
-          <p className="mb-3 font-display text-[3.5rem] leading-none tracking-tight text-[#4c3850]">SITA</p>
-          <p className="mx-auto max-w-[270px] text-[12px] font-bold uppercase leading-relaxed tracking-[0.15em] text-[#9b8599]">
+        
+        <div className="fade-up fade-up-1">
+          <h1 className="mb-4 font-display text-[4rem] leading-none tracking-[-.04em] text-[#4c3850]">
+            SITA
+          </h1>
+          <h2 className="mx-auto mb-10 max-w-[300px] text-[11px] font-bold uppercase leading-[1.8] tracking-[0.2em] text-[#9b8599]">
             Smart Intelligence for<br />Treatment &amp; Awareness
+          </h2>
+        </div>
+
+        <div className="fade-up fade-up-2 mb-12 relative w-full overflow-hidden rounded-[2.5rem] border border-white/60 bg-white/40 p-8 shadow-[0_8px_32px_rgba(152,126,145,0.08),inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-2xl">
+          <p className="font-display text-[1.4rem] leading-snug text-[#5d4662]">
+            Your health.<br />
+            <span className="text-[#9f6a80]">Your journey.</span><br />
+            Your SITA.
           </p>
-          <p className="mx-auto mt-6 max-w-[300px] text-[13px] leading-relaxed text-[#7a6575]">
-            A private health space made for understanding your cycle, mood, and reproductive wellness.
+          <p className="mx-auto mt-5 max-w-[280px] text-[14px] leading-relaxed text-[#7a6575]">
+            A private, intelligent space made for understanding your reproductive wellness, cycle, and mood.
           </p>
         </div>
-        <button
-          onClick={() => setLocation(signedIn ? '/' : '/auth')}
-          className="fade-up fade-up-2 mt-10 flex w-full items-center justify-center gap-3 rounded-full bg-[#5d4662] px-5 py-4 text-[13px] font-bold text-white shadow-[0_12px_24px_rgba(93,70,98,.25)] transition-all hover:-translate-y-1 hover:bg-[#4a364e]"
-          data-testid="button-get-started"
-        >
-          {signedIn ? 'Open my SITA space' : 'Begin your journey'} <ArrowRight className="h-4 w-4" />
-        </button>
-        <div className="fade-up fade-up-2 mt-8 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest text-[#a895a5]">
-          <Sparkles className="h-3 w-3" /> Privacy first. Always.
+
+        <div className="fade-up fade-up-3 flex w-full flex-col gap-4 sm:flex-row">
+          <button
+            onClick={() => setLocation('/auth?mode=signup')}
+            className="group flex w-full items-center justify-center gap-3 rounded-full bg-[#5d4662] px-6 py-4 text-[14px] font-bold text-white shadow-[0_8px_20px_rgba(93,70,98,.2)] transition-all hover:-translate-y-0.5 hover:bg-[#4a364e] hover:shadow-[0_12px_24px_rgba(93,70,98,.3)]"
+          >
+            Get Started <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </button>
+          <button
+            onClick={() => setLocation('/auth?mode=signin')}
+            className="flex w-full items-center justify-center rounded-full border-2 border-[#5d4662]/10 bg-white/50 px-6 py-4 text-[14px] font-bold text-[#5d4662] backdrop-blur-md transition-all hover:bg-white/80"
+          >
+            Sign In
+          </button>
+        </div>
+
+        <div className="fade-up fade-up-3 mt-10 flex items-center justify-center gap-2.5 text-[10px] font-bold uppercase tracking-widest text-[#a895a5]">
+          <ShieldCheck className="h-3.5 w-3.5" /> Privacy first. Always.
         </div>
       </div>
     </div>
@@ -139,8 +155,8 @@ export function WelcomePage() {
 export function AuthPage() {
   const [, setLocation] = useLocation();
   const { refreshAll } = useSitaStore();
-  const [signup, setSignup] = useState(false);
-  const [name, setName] = useState('Tanvi');
+  const [signup, setSignup] = useState(() => new URLSearchParams(window.location.search).get('mode') === 'signup');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -192,7 +208,7 @@ export function AuthPage() {
           {signup && (
             <label className="mb-5 block text-xs font-bold uppercase tracking-wider text-[#765f71]">
               Name / Display Name
-              <input value={name} onChange={(e) => setName(e.target.value)} required className="mt-2 w-full rounded-2xl border border-white/80 bg-white/80 px-4 py-3.5 text-[13px] text-[#4d394e] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] outline-none transition focus:border-[#b7829a] focus:ring-2 focus:ring-[#f7dce5]" placeholder="e.g. Tanvi" />
+              <input value={name} onChange={(e) => setName(e.target.value)} required className="mt-2 w-full rounded-2xl border border-white/80 bg-white/80 px-4 py-3.5 text-[13px] text-[#4d394e] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] outline-none transition focus:border-[#b7829a] focus:ring-2 focus:ring-[#f7dce5]" placeholder="e.g. Maya" />
             </label>
           )}
           <label className="mb-5 block text-xs font-bold uppercase tracking-wider text-[#765f71]">
@@ -246,11 +262,11 @@ export function AuthPage() {
 export function OnboardingPage() {
   const [, setLocation] = useLocation();
   const { mode, setMode, updateProfile } = useSitaStore();
-  const [name, setName] = useState('Tanvi');
+  const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [cycleLength, setCycleLength] = useState('28');
   const [periodLength, setPeriodLength] = useState('5');
-  const [lastPeriod, setLastPeriod] = useState('2025-08-01');
+  const [lastPeriod, setLastPeriod] = useState('');
   const [healthNotes, setHealthNotes] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -675,7 +691,7 @@ export function HomePage() {
 // ==========================================
 export function CyclePage() {
   const { periodDateStrings, togglePeriodDayString, logPeriodDetails, profile } = useSitaStore();
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 7, 14)); // default August 2025 as in reference
+  const [currentDate, setCurrentDate] = useState(new Date()); // default August 2025 as in reference
   const [selectedDay, setSelectedDay] = useState(14);
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [flow, setFlow] = useState<'light' | 'medium' | 'heavy' | 'spotting'>('medium');
@@ -793,9 +809,9 @@ export function CyclePage() {
                   day === today.getDate() &&
                   currentDate.getMonth() === today.getMonth() &&
                   currentDate.getFullYear() === today.getFullYear();
-                const isPredicted = cycle.hasPeriodData && day >= cycle.currentDay + cycle.nextPeriodIn - 1 && day <= cycle.currentDay + cycle.nextPeriodIn + 2;
-                const isFertile = cycle.hasPeriodData && day >= cycle.fertileWindowStart && day <= cycle.fertileWindowEnd;
-                const isOvulation = cycle.hasPeriodData && day === cycle.ovulationDay;
+                const isPredicted = cycle.hasPeriodData && cycle.predictedPeriodDates.includes(dStr);
+                const isFertile = cycle.hasPeriodData && cycle.fertileWindowDates.includes(dStr);
+                const isOvulation = cycle.hasPeriodData && cycle.ovulationDateStr === dStr;
 
                 let badgeClass = 'text-[#715d6c] hover:bg-white/60';
                 if (isPeriod) badgeClass = 'bg-gradient-to-br from-[#eb86a5] to-[#de678a] text-white shadow-md font-bold';
@@ -1007,7 +1023,7 @@ export function MoodPage() {
   };
 
   const moodOptions: { label: Mood; emoji: string; color: string }[] = [
-    { label: 'Very Happy', emoji: '😄', color: '#ffb347' },
+    { label: 'Very happy', emoji: '😄', color: '#ffb347' },
     { label: 'Good', emoji: '😊', color: '#ffcc00' },
     { label: 'Okay', emoji: '😐', color: '#e6c229' },
     { label: 'Low', emoji: '😔', color: '#8892b0' },
@@ -1201,11 +1217,11 @@ export function InsightsPage() {
       const label = isNaN(d.getTime()) ? entry.date : `${d.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}`;
       let val = 5;
       if (metric === 'Stress') {
-        val = entry.stress_level ?? 5;
+        val = entry.stress ?? 5;
       } else if (metric === 'Energy') {
-        val = entry.energy_level ?? 5;
+        val = entry.energy ?? 5;
       } else if (metric === 'Sleep') {
-        val = Math.min(10, Math.max(1, (entry.sleep_hours || 7)));
+        val = Math.min(10, Math.max(1, parseFloat(String(entry.sleep || 7))));
       } else {
         const mKey = (entry.mood || '').toLowerCase();
         val = moodScoreMap[mKey] ?? 6;
@@ -1654,7 +1670,7 @@ export function PregnancyPage() {
   const [, setLocation] = useLocation();
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [appointmentTitle, setAppointmentTitle] = useState('');
-  const [appointmentDate, setAppointmentDate] = useState('2025-09-10');
+  const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentDoctor, setAppointmentDoctor] = useState('Dr. Anita Rao');
 
   const stats = calculatePregnancyStats(pregnancyData.due_date, pregnancyData.pregnancy_start_date);
@@ -1883,7 +1899,7 @@ export function PostpartumPage() {
   const [kegelActive, setKegelActive] = useState(false);
   const [kegelPhase, setKegelPhase] = useState<'Squeeze' | 'Relax'>('Squeeze');
 
-  const displayName = profile?.display_name || 'Tanvi';
+  const displayName = profile?.display_name || '';
   const stats = calculatePostpartumStats(postpartumData.birth_date);
 
   // Kegel animation timer loop
@@ -2081,13 +2097,13 @@ export function ProfilePage() {
   const [, setLocation] = useLocation();
   const [saved, setSaved] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
-  const [name, setName] = useState(profile?.display_name || 'Tanvi Tapaswani');
+  const [name, setName] = useState(profile?.display_name || '');
   const [cycleSettingsOpen, setCycleSettingsOpen] = useState(false);
   const [cycleLength, setCycleLength] = useState(String(profile?.typical_cycle_length || 28));
   const [periodLength, setPeriodLength] = useState(String(profile?.typical_period_length || 5));
   const [purgeConfirmOpen, setPurgeConfirmOpen] = useState(false);
 
-  const displayName = profile?.display_name || 'Tanvi Tapaswani';
+  const displayName = profile?.display_name || '';
 
   const handleSaveProfileName = async (e: React.FormEvent) => {
     e.preventDefault();

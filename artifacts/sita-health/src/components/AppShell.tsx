@@ -7,12 +7,43 @@ import { useSitaStore } from '@/data/store';
 
 const iconMap = { home: Home, calendar: CalendarDays, smile: Smile, sparkles: Sparkles, user: UserRound, baby: Baby };
 
-export function SitaLogo({ compact = false }: { compact?: boolean }) {
+export function OriginalSitaMark({ className = "w-10 h-10" }: { className?: string }) {
   return (
-    <Link href="/" className="flex items-center gap-2.5" data-testid="link-logo-home">
-      <span className="grid h-9 w-9 place-items-center rounded-[38%] bg-[#e5799e] text-white shadow-[0_5px_15px_rgba(212,100,137,.24)]">
-        <Sparkles className="h-4.5 w-4.5" strokeWidth={1.8} />
-      </span>
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <circle cx="50" cy="50" r="48" fill="url(#sita-glow)" className="opacity-40 blur-[2px]" />
+      <path 
+        d="M20 50C20 33.4 33.4 20 50 20C66.6 20 80 33.4 80 50C80 63.8 70.8 75.5 58 79C47.1 82 34 76 25.5 66C22 61.4 20 55.9 20 50Z" 
+        fill="url(#sita-warm)" 
+        className="opacity-90"
+      />
+      <path 
+        d="M38 65C34.5 59.8 32 53 32 45C32 35.1 40.1 27 50 27C59.9 27 68 35.1 68 45C68 59 55 72 45 74C42 74.6 39.5 73.5 38 65Z" 
+        fill="url(#sita-calm)" 
+        className="opacity-95 mix-blend-multiply"
+      />
+      <circle cx="58" cy="40" r="6" fill="white" className="opacity-95" />
+      <defs>
+        <radialGradient id="sita-glow" cx="0.5" cy="0.5" r="0.5" fx="0.5" fy="0.5">
+          <stop offset="0%" stopColor="#F5E6EC" />
+          <stop offset="100%" stopColor="#FAF7F9" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="sita-warm" x1="20" y1="20" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#F1C2D3" />
+          <stop offset="1" stopColor="#E29BB7" />
+        </linearGradient>
+        <linearGradient id="sita-calm" x1="32" y1="27" x2="68" y2="74" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#D5C5DF" />
+          <stop offset="1" stopColor="#A88BBD" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+export function SitaLogo({ compact = false, className }: { compact?: boolean, className?: string }) {
+  return (
+    <Link href="/" className={`flex items-center gap-2.5 ${className || ''}`} data-testid="link-logo-home">
+      <OriginalSitaMark className="h-9 w-9" />
       {!compact && <span className="font-display text-[1.65rem] leading-none tracking-[-.04em] text-[#4c3850]">SITA</span>}
     </Link>
   );

@@ -73,12 +73,13 @@ router.post("/chat", async (req: Request, res): Promise<void> => {
   }
 
   // Fetch contextual user data securely (RLS guarantees only this user's data is accessed)
-  const [profileRes, recentMoodsRes, recentCyclesRes, pregRes, postRes] = await Promise.all([
+  const [profileRes, recentMoodsRes, recentCyclesRes, pregRes, postRes, screeningRes] = await Promise.all([
     supabaseRequest("/rest/v1/profiles?select=*&limit=1", { method: "GET" }, token),
     supabaseRequest("/rest/v1/moods?select=mood,stress,energy,sleep,logged_at&order=logged_at.desc&limit=3", { method: "GET" }, token),
     supabaseRequest("/rest/v1/cycle_logs?select=period_date,flow,cramps,symptoms&order=period_date.desc&limit=5", { method: "GET" }, token),
     supabaseRequest("/rest/v1/pregnancy_data?select=*&limit=1", { method: "GET" }, token),
     supabaseRequest("/rest/v1/postpartum_data?select=*&limit=1", { method: "GET" }, token),
+    supabaseRequest("/rest/v1/screening_sessions?select=*&order=created_at.desc&limit=2", { method: "GET" }, token),
   ]);
 
   const profile = profileRes.ok ? (await responseJson(profileRes))?.[0] : null;
@@ -86,6 +87,7 @@ router.post("/chat", async (req: Request, res): Promise<void> => {
   const recentCycles = recentCyclesRes.ok ? await responseJson(recentCyclesRes) : [];
   const pregData = pregRes.ok ? (await responseJson(pregRes))?.[0] : null;
   const postData = postRes.ok ? (await responseJson(postRes))?.[0] : null;
+  const recentScreenings = (screeningRes && screeningRes.ok) ? await responseJson(screeningRes) : [];
 
   const displayName = profile?.display_name || "friend";
   const mode = profile?.reproductive_mode || "not-pregnant";
@@ -105,6 +107,13 @@ router.post("/chat", async (req: Request, res): Promise<void> => {
   if (recentMoods.length > 0) {
     userContext += `\n- Recent moods: ${recentMoods.map((m: any) => `${m.logged_at}: ${m.mood} (Stress ${m.stress}/10, Energy ${m.energy}/10)`).join("; ")}`;
   }
+  if (recentScreenings && recentScreenings.length > 0) {
+    userContext += `\n- Recent health assessments:\n`;
+    recentScreenings.forEach((s: any) => {
+      userContext += `  * ${s.screening_type} (${s.created_at}): Risk Level: ${s.risk_level}. Summary: ${s.summary_explanation.slice(0,100)}...\n`;
+    });
+  }
+
   if (profile?.health_notes) {
     userContext += `\n- User health notes: ${profile.health_notes}`;
   }
@@ -155,6 +164,7 @@ ${userContext}`;
 
 // 2. Deterministic PCOS Screening + AI Explanation
 router.post("/screening/pcos", async (req: Request, res): Promise<void> => {
+  try {
   const token = access(req);
   if (!token) {
     res.status(401).json({ message: "Please sign in to take the PCOS screening." });
@@ -201,10 +211,15 @@ Explain that this is an awareness screening, not a definitive diagnosis, and hig
   ).catch(console.error);
 
   res.json({ result: structuredResult, explanation });
+  } catch (error: any) {
+    console.error("[PCOS Screening Error]:", error);
+    res.status(500).json({ message: error.message || "Internal server error during PCOS screening." });
+  }
 });
 
 // 3. Deterministic Symptom Triage + AI Explanation
 router.post("/screening/triage", async (req: Request, res): Promise<void> => {
+  try {
   const token = access(req);
   if (!token) {
     res.status(401).json({ message: "Please sign in to access symptom triage." });
@@ -249,6 +264,10 @@ Provide comforting yet practical advice. If prompt evaluation is advised, explai
   ).catch(console.error);
 
   res.json({ result: structuredResult, explanation });
+  } catch (error: any) {
+    console.error("[Symptom Triage Error]:", error);
+    res.status(500).json({ message: error.message || "Internal server error during Symptom triage." });
+  }
 });
 
 // 4. Chat history & conversation management
