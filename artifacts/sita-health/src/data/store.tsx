@@ -58,7 +58,14 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
   };
   const changeMode = (next: ReproductiveMode) => { setMode(next); persistProfile({ reproductive_mode: next }); };
   const changePrivacy = (next: boolean) => { setPrivacy(next); persistProfile({ privacy_enabled: next }); };
-  const togglePeriodDay = (day: number) => setPeriodDays((current) => current.includes(day) ? current.filter((item) => item !== day) : [...current, day].sort((a, b) => a - b));
+  const togglePeriodDay = (day: number) => {
+    const exists = periodDays.includes(day);
+    setPeriodDays((current) => exists ? current.filter((item) => item !== day) : [...current, day].sort((a, b) => a - b));
+    if (signedIn) {
+      const date = `2025-08-${String(day).padStart(2, '0')}`;
+      void (exists ? api.removeByDate('cycle_logs', date) : api.insert('cycle_logs', { period_date: date })).catch(console.error);
+    }
+  };
   const addMood = (entry: Omit<MoodEntry, 'id' | 'date'>) => {
     setMoodEntries((current) => [{ ...entry, id: `m-${Date.now()}`, date: 'Today' }, ...current]);
     if (signedIn) void api.insert('moods', { ...entry, logged_at: new Date().toISOString().slice(0, 10) }).catch(console.error);

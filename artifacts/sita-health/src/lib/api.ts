@@ -19,10 +19,13 @@ export const api = {
   session: () => request<Session>('/auth/session'),
   login: (email: string, password: string) => request<Session>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   signup: (email: string, password: string, displayName: string) => request<SignupResponse>('/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, displayName }) }),
+  googleUrl: () => '/api/auth/google',
   logout: () => request<void>('/auth/logout', { method: 'POST' }),
   profile: () => request<any>('/me'),
   updateProfile: (profile: Record<string, unknown>) => request<any>('/me', { method: 'PATCH', body: JSON.stringify(profile) }),
   list: <T>(table: string) => request<T[]>(`/data/${table}`),
   insert: <T>(table: string, row: Record<string, unknown>) => request<T>(`/data/${table}`, { method: 'POST', body: JSON.stringify(row) }),
+  remove: (table: string, id: string) => request<void>(`/data/${table}/${id}`, { method: 'DELETE' }),
+  removeByDate: (table: string, date: string) => request<void>(`/data/${table}/by-date/${date}`, { method: 'DELETE' }),
   chat: (text: string) => request<{ reply: string }>('/chat', { method: 'POST', body: JSON.stringify({ text }) }),
 };

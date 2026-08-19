@@ -49,6 +49,7 @@ export function AuthPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [oauthError] = useState(() => new URLSearchParams(window.location.search).get('error'));
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError('');
     try {
@@ -62,15 +63,53 @@ export function AuthPage() {
     <div className="mx-auto w-full max-w-md">
       <Link href="/welcome" className="mb-12 inline-flex items-center gap-2 text-xs font-bold text-[#907587]"><ArrowLeft className="h-4 w-4" /> Back</Link>
       <div className="mb-8"><p className="eyebrow">Your private health space</p><h1 className="font-display text-5xl leading-[.95] text-[#4d394e]">{signup ? 'Begin gently.' : 'Welcome back.'}</h1><p className="mt-4 text-sm leading-relaxed text-[#8d7587]">Your SITA space is private, personal, and yours to return to.</p></div>
+      {oauthError && <p className="mb-4 rounded-2xl bg-[#fff0f3] px-3 py-2 text-xs font-semibold text-[#b55778]">Google sign-in could not be completed. Please try again.</p>}
       <form onSubmit={submit} className="rounded-[28px] border border-[#f0e0e8] bg-white p-5 shadow-[0_18px_50px_rgba(89,55,76,.08)]">
         {signup && <label className="mb-4 block text-xs font-bold text-[#765f71]">Name<input value={name} onChange={e => setName(e.target.value)} className="sita-input mt-2" /></label>}
         <label className="mb-4 block text-xs font-bold text-[#765f71]">Email<input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="sita-input mt-2" /></label>
         <label className="block text-xs font-bold text-[#765f71]">Password<input type="password" minLength={6} required value={password} onChange={e => setPassword(e.target.value)} className="sita-input mt-2" /></label>
         {error && <p className="mt-4 rounded-2xl bg-[#fff0f3] px-3 py-2 text-xs font-semibold text-[#b55778]">{error}</p>}
         <button disabled={busy} className="mt-6 w-full rounded-full bg-[#e9779d] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-60">{busy ? 'One moment…' : signup ? 'Create my space' : 'Sign in'}</button>
+        <div className="my-4 flex items-center gap-3 text-[10px] text-[#b09aa7]"><span className="h-px flex-1 bg-[#f0e4e9]" />or<span className="h-px flex-1 bg-[#f0e4e9]" /></div>
+        <button type="button" onClick={() => { window.location.href = api.googleUrl(); }} className="w-full rounded-full border border-[#eadde5] bg-white px-5 py-3 text-xs font-bold text-[#6f596a] transition hover:bg-[#fff7f9]">Continue with Google</button>
       </form>
       <button onClick={() => { setSignup(!signup); setError(''); }} className="mt-5 w-full text-center text-xs font-bold text-[#9b7187]">{signup ? 'Already have an account? Sign in' : 'New to SITA? Create an account'}</button>
     </div>
+  </div>;
+}
+
+export function OnboardingPage() {
+  const [, setLocation] = useLocation();
+  const { mode, setMode } = useSitaStore();
+  const [name, setName] = useState('Kirti');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [cycleLength, setCycleLength] = useState('28');
+  const [lastPeriod, setLastPeriod] = useState('');
+  const [healthNotes, setHealthNotes] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault(); setBusy(true); setError('');
+    try {
+      await api.updateProfile({ display_name: name.trim(), date_of_birth: dateOfBirth || null, reproductive_mode: mode, typical_cycle_length: mode === 'not-pregnant' ? Number(cycleLength) : null, last_period_date: mode === 'not-pregnant' ? (lastPeriod || null) : null, health_notes: healthNotes.trim() || null, onboarding_complete: true });
+      setLocation(mode === 'pregnant' ? '/pregnancy' : mode === 'postpartum' ? '/postpartum' : '/');
+    } catch (caught) { setError(caught instanceof Error ? caught.message : 'Unable to save your details.'); }
+    finally { setBusy(false); }
+  };
+  return <div className="min-h-dvh bg-[#fffafa] px-5 py-8 sm:grid sm:place-items-center">
+    <form onSubmit={submit} className="mx-auto w-full max-w-xl">
+      <p className="eyebrow">A little context helps</p><h1 className="font-display text-5xl leading-[.95] text-[#4d394e]">Make this space yours.</h1><p className="mt-4 text-sm leading-relaxed text-[#8d7587]">Only share what feels useful. You can change these details later in Profile.</p>
+      <div className="mt-8 rounded-[28px] border border-[#f0e0e8] bg-white p-5 shadow-[0_18px_50px_rgba(89,55,76,.08)]">
+        <label className="mb-4 block text-xs font-bold text-[#765f71]">Name<input required value={name} onChange={e => setName(e.target.value)} className="sita-input mt-2" /></label>
+        <label className="mb-4 block text-xs font-bold text-[#765f71]">Date of birth <span className="font-normal text-[#b09aa7]">(optional)</span><input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} className="sita-input mt-2" /></label>
+        <p className="mb-2 text-xs font-bold text-[#765f71]">Your current season</p>
+        <div className="mb-5 grid gap-2 sm:grid-cols-3">{(['not-pregnant', 'pregnant', 'postpartum'] as ReproductiveMode[]).map(item => <button type="button" key={item} onClick={() => setMode(item)} className={`rounded-2xl border px-3 py-3 text-xs font-bold ${mode === item ? 'border-[#e889a6] bg-[#fff0f4] text-[#b55778]' : 'border-[#eee2e8] text-[#927e8d]'}`}>{modeDetails[item].title}</button>)}</div>
+        {mode === 'not-pregnant' && <div className="grid gap-4 sm:grid-cols-2"><label className="block text-xs font-bold text-[#765f71]">Typical cycle length<input type="number" min="15" max="60" required value={cycleLength} onChange={e => setCycleLength(e.target.value)} className="sita-input mt-2" /></label><label className="block text-xs font-bold text-[#765f71]">Last period <span className="font-normal text-[#b09aa7]">(optional)</span><input type="date" value={lastPeriod} onChange={e => setLastPeriod(e.target.value)} className="sita-input mt-2" /></label></div>}
+        <label className="mt-4 block text-xs font-bold text-[#765f71]">Anything relevant for SITA? <span className="font-normal text-[#b09aa7]">(optional)</span><textarea value={healthNotes} onChange={e => setHealthNotes(e.target.value)} className="sita-input mt-2 min-h-24 resize-none" placeholder="For example, a health goal or something you want support with." /></label>
+        {error && <p className="mt-4 rounded-2xl bg-[#fff0f3] px-3 py-2 text-xs font-semibold text-[#b55778]">{error}</p>}
+        <button disabled={busy} className="mt-6 w-full rounded-full bg-[#e9779d] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-60">{busy ? 'Saving your space…' : 'Continue to SITA'}</button>
+      </div>
+    </form>
   </div>;
 }
 
