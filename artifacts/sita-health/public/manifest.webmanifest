@@ -1,0 +1,12 @@
+{
+  "name": "SITA Health",
+  "short_name": "SITA",
+  "description": "A gentle, private health companion for understanding your patterns.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffafa",
+  "theme_color": "#e9779d",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
