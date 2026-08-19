@@ -75,11 +75,18 @@ export class ErrorBoundary extends Component<
   }
 
   componentDidCatch(error: unknown, info: ErrorInfo): void {
+    const err = toError(error);
     console.error(
       'ErrorBoundary caught an error:',
-      toError(error),
+      err,
       info.componentStack,
     );
+    // Send to backend for debugging
+    fetch('/api/debug-error', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: err.message, stack: err.stack, componentStack: info.componentStack })
+    }).catch(console.error);
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps): void {

@@ -39,7 +39,7 @@ function App() {
   return <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <SitaStoreProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router /></WouterRouter>
+        <WouterRouter base={(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}><Router /></WouterRouter>
       </SitaStoreProvider>
       <Toaster />
     </TooltipProvider>

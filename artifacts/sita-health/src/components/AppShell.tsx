@@ -21,12 +21,22 @@ export function SitaLogo({ compact = false }: { compact?: boolean }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { mode } = useSitaStore();
+  const { mode, profile } = useSitaStore();
   const contextualNav = mode === 'pregnant'
     ? navItems.map((item) => item.href === '/cycle' ? { ...item, href: '/pregnancy', label: 'Pregnancy', icon: 'baby' as const } : item)
     : mode === 'postpartum'
       ? navItems.map((item) => item.href === '/cycle' ? { ...item, href: '/postpartum', label: 'Postpartum', icon: 'baby' as const } : item)
       : navItems;
+
+  const todayStr = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date());
+
+  const userInitial = (profile?.name || profile?.display_name || 'S').trim().charAt(0).toUpperCase() || 'S';
+
   return (
     <div className="sita-noise app-shell flex bg-transparent">
       <aside className="desktop-side sticky top-0 hidden h-dvh w-[238px] shrink-0 flex-col border-r border-[#eadce4] bg-[#fffafb]/80 px-5 py-7 backdrop-blur-xl md:flex">
@@ -51,10 +61,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-30 flex h-[70px] items-center justify-between border-b border-[#eee2e7]/80 bg-[#fffafa]/78 px-5 backdrop-blur-xl md:px-9">
           <div className="md:hidden"><SitaLogo compact /></div>
-          <div className="hidden text-sm font-semibold text-[#a08b9b] md:block">{location === '/' ? 'Thursday, 14 August 2025' : 'Your private health space'}</div>
+          <div className="hidden text-sm font-semibold text-[#a08b9b] md:block">{location === '/' ? todayStr : 'Your private health space'}</div>
           <div className="ml-auto flex items-center gap-2.5">
             <button onClick={() => setMenuOpen(true)} className="relative grid h-10 w-10 place-items-center rounded-full bg-[#fff1f5] text-[#aa7188] transition-transform hover:scale-105" data-testid="button-notifications" aria-label="Notifications"><Bell className="h-[18px] w-[18px]" strokeWidth={1.7} /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#dc6e93]" /></button>
-            <Link href="/profile" className="grid h-10 w-10 place-items-center rounded-full bg-[#e9dfef] text-xs font-bold text-[#806a98]" data-testid="link-header-profile">T</Link>
+            <Link href="/profile" className="grid h-10 w-10 place-items-center rounded-full bg-[#e9dfef] text-xs font-bold text-[#806a98]" data-testid="link-header-profile">{userInitial}</Link>
             <button onClick={() => setMenuOpen(true)} className="grid h-10 w-10 place-items-center rounded-full text-[#8a7383] md:hidden" data-testid="button-open-menu" aria-label="Open menu"><Menu className="h-5 w-5" /></button>
           </div>
         </header>

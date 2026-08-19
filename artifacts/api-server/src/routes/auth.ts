@@ -79,6 +79,24 @@ router.post("/auth/logout", (req, res) => {
   res.status(204).end();
 });
 
+router.post("/auth/reset-password", async (req: Request, res): Promise<void> => {
+  const email = String(req.body?.email ?? "").trim();
+  if (!email) {
+    res.status(400).json({ message: "Email is required to request a password reset." });
+    return;
+  }
+  const response = await supabaseRequest("/auth/v1/recover", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+  const data = await responseJson(response);
+  if (!response.ok) {
+    res.status(response.status).json({ message: data?.msg ?? data?.message ?? "Could not send reset email." });
+    return;
+  }
+  res.json({ message: "Password reset instructions have been sent to your email." });
+});
+
 router.get("/me", async (req, res): Promise<void> => {
   const accessToken = token(req);
   if (!accessToken) { res.status(401).json({ message: "Please sign in." }); return; }
