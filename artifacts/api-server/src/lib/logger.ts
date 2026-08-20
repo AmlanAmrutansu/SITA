@@ -9,12 +9,14 @@ export const logger = pino({
     "req.headers.cookie",
     "res.headers['set-cookie']",
   ],
-  ...(isProduction
-    ? {}
-    : {
-        transport: {
-          target: "pino-pretty",
-          options: { colorize: true },
-        },
-      }),
+// Transport removed to prevent Netlify serverless bundle crashes
+  // (process.env.NODE_ENV check is sometimes unreliable in Lambda runtime)
+  // ...(isProduction
+  //   ? {}
+  //   : {
+  //       transport: {
+  //         target: "pino-pretty",
+  //         options: { colorize: true },
+  //       },
+  //     }),
 });
