@@ -13,7 +13,7 @@ function setSessionCookies(res: any, session: any) {
 }
 
 function token(req: Request) {
-  return req.cookies?.[ACCESS_COOKIE] as string | undefined;
+  return (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.split(" ")[1] : req.cookies?.[ACCESS_COOKIE]) as string | undefined;
 }
 
 function publicOrigin(req: Request) {
@@ -58,7 +58,7 @@ router.get("/auth/session", async (req, res): Promise<void> => {
 });
 
 router.post("/auth/signup", async (req, res): Promise<void> => {
-  const response = await supabaseRequest("/auth/v1/signup", { method: "POST", body: JSON.stringify({ email: req.body.email, password: req.body.password, data: { display_name: req.body.displayName ?? "Kirti" } }) });
+  const response = await supabaseRequest("/auth/v1/signup", { method: "POST", body: JSON.stringify({ email: req.body.email, password: req.body.password, data: { display_name: req.body.displayName ?? "" } }) });
   const data = await responseJson(response);
   if (!response.ok) { res.status(response.status).json({ message: data?.msg ?? data?.message ?? "Could not create your account." }); return; }
   if (data?.access_token) setSessionCookies(res, data);

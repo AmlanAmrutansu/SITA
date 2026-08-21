@@ -5,6 +5,15 @@ import { defineConfig } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 
+
+// Map backend Netlify environment variables to frontend VITE_ variables if they are missing
+if (process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+  process.env.VITE_SUPABASE_URL = process.env.SUPABASE_URL;
+}
+if (process.env.SUPABASE_ANON_KEY && !process.env.VITE_SUPABASE_ANON_KEY) {
+  process.env.VITE_SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+}
+
 const port = Number(process.env.PORT || 3000);
 const basePath = process.env.BASE_PATH || '/';
 

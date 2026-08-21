@@ -5,7 +5,7 @@ create extension if not exists "pgcrypto";
 -- 1. Profiles
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  display_name text not null default 'Tanvi',
+  display_name text not null default '',
   reproductive_mode text not null default 'not-pregnant' check (reproductive_mode in ('not-pregnant','pregnant','postpartum')),
   privacy_enabled boolean not null default true,
   onboarding_complete boolean not null default false,
@@ -177,7 +177,7 @@ create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
   insert into public.profiles (id, display_name)
-  values (new.id, coalesce(new.raw_user_meta_data->>'display_name', 'Tanvi'))
+  values (new.id, coalesce(new.raw_user_meta_data->>'display_name', ''))
   on conflict (id) do nothing;
   return new;
 end;

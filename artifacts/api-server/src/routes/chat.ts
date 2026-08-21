@@ -3,7 +3,7 @@ import { responseJson, supabaseRequest } from "../lib/supabase";
 import { evaluatePCOS, evaluateSymptomTriage, type PCOSScreeningInput, type SymptomTriageInput } from "../lib/screening";
 
 const router: IRouter = Router();
-const access = (req: Request) => req.cookies?.sita_access_token as string | undefined;
+const access = (req: Request) => (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.split(" ")[1] : req.cookies?.sita_access_token) as string | undefined;
 
 async function getAuthenticatedUser(token: string) {
   const userResponse = await supabaseRequest("/auth/v1/user", { method: "GET" }, token);

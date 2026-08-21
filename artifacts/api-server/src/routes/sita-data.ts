@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request } from "express";
 import { responseJson, supabaseRequest } from "../lib/supabase";
 
 const router: IRouter = Router();
-const access = (req: Request) => req.cookies?.sita_access_token as string | undefined;
+const access = (req: Request) => (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.split(" ")[1] : req.cookies?.sita_access_token) as string | undefined;
 
 const allowedTables = new Set([
   "profiles",

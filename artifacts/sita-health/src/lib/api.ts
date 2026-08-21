@@ -1,3 +1,4 @@
+import { supabase } from './supabase';
 export interface Session {
   user: { id: string; email?: string; user_metadata?: { display_name?: string } } | null;
 }
@@ -64,9 +65,15 @@ export interface SymptomTriageResult {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(init?.headers as Record<string, string> ?? {}) };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   const response = await fetch(`/api${path}`, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+    headers,
   });
   const data = response.status === 204 ? null : await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -76,16 +83,30 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  session: () => request<Session>('/auth/session'),
-  login: (email: string, password: string) =>
-    request<Session>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  signup: (email: string, password: string, displayName: string) =>
-    request<SignupResponse>('/auth/signup', {
-      method: 'POST',
-      body: JSON.stringify({ email, password, displayName }),
-    }),
-  googleUrl: () => '/api/auth/google',
-  logout: () => request<void>('/auth/logout', { method: 'POST' }),
+  session: async () => {
+    const { data } = await supabase.auth.getSession();
+    return { user: data.session?.user ?? null };
+  },
+  login: async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+    return { user: data.user };
+  },
+  signup: async (email: string, password: string, displayName: string) => {
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: displayName } } });
+    if (error) throw new Error(error.message);
+    return { user: data.user, needsEmailConfirmation: !data.session };
+  },
+  resetPassword: async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth?reset=true`,
+    });
+    if (error) throw new Error(error.message);
+  },
+  logout: async () => {
+    await supabase.auth.signOut();
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+  },
   profile: () => request<Profile | null>('/me'),
   updateProfile: (profile: Partial<Profile>) =>
     request<Profile>('/me', { method: 'PATCH', body: JSON.stringify(profile) }),

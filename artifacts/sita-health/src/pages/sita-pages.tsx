@@ -159,6 +159,7 @@ export function AuthPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [oauthError] = useState(() => new URLSearchParams(window.location.search).get('error'));
@@ -167,6 +168,11 @@ export function AuthPage() {
     event.preventDefault();
     setBusy(true);
     setError('');
+    if (signup && password !== confirmPassword) {
+      setError('Passwords do not match.');
+      setBusy(false);
+      return;
+    }
     try {
       const result = signup ? await api.signup(email, password, name) : await api.login(email, password);
       await refreshAll();
@@ -215,6 +221,12 @@ export function AuthPage() {
             Email address
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="mt-2 w-full rounded-2xl border border-white/80 bg-white/80 px-4 py-3.5 text-[13px] text-[#4d394e] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] outline-none transition focus:border-[#b7829a] focus:ring-2 focus:ring-[#f7dce5]" placeholder="you@example.com" />
           </label>
+          {signup && (
+            <label className="mb-5 block text-xs font-bold uppercase tracking-wider text-[#765f71]">
+              Confirm Password
+              <input type="password" minLength={6} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="mt-2 w-full rounded-2xl border border-white/80 bg-white/80 px-4 py-3.5 text-[13px] text-[#4d394e] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] outline-none transition focus:border-[#b7829a] focus:ring-2 focus:ring-[#f7dce5]" placeholder="Must match password" />
+            </label>
+          )}
           <label className="block text-xs font-bold uppercase tracking-wider text-[#765f71]">
             Password
             <input type="password" minLength={6} required value={password} onChange={(e) => setPassword(e.target.value)} className="mt-2 w-full rounded-2xl border border-white/80 bg-white/80 px-4 py-3.5 text-[13px] text-[#4d394e] shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] outline-none transition focus:border-[#b7829a] focus:ring-2 focus:ring-[#f7dce5]" placeholder="At least 6 characters" />
@@ -222,7 +234,22 @@ export function AuthPage() {
           
           {!signup && (
              <div className="mt-3 flex justify-end">
-               <button type="button" className="text-[11px] font-bold text-[#b7829a] hover:text-[#5d4662]" onClick={() => alert('Password reset instructions will be sent to your email. (Feature active via API)')}>Forgot password?</button>
+               <button type="button" className="text-[11px] font-bold text-[#b7829a] hover:text-[#5d4662]" onClick={async () => {
+    if (!email) {
+      setError('Please enter your email first to reset password.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await api.resetPassword(email);
+      setError('Password reset instructions have been sent to your email.');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to reset password.');
+    } finally {
+      setBusy(false);
+    }
+  }}>Forgot password?</button>
              </div>
           )}
 
@@ -232,17 +259,7 @@ export function AuthPage() {
             {busy ? 'One moment…' : signup ? 'Create account' : 'Sign in'}
           </button>
           
-          <div className="my-6 flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-[#b09aa7]">
-            <span className="h-px flex-1 bg-gradient-to-r from-transparent to-[#e8dbe3]" />or<span className="h-px flex-1 bg-gradient-to-l from-transparent to-[#e8dbe3]" />
-          </div>
-          
-          <button
-            type="button"
-            onClick={() => { window.location.href = api.googleUrl(); }}
-            className="flex w-full items-center justify-center gap-3 rounded-full border border-white/80 bg-white/60 px-5 py-3.5 text-[13px] font-bold text-[#6f596a] shadow-sm backdrop-blur-md transition-all hover:bg-white"
-          >
-            Continue with Google
-          </button>
+
         </form>
         
         <button

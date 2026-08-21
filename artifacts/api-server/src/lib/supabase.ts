@@ -24,10 +24,13 @@ export async function supabaseRequest(
   const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
   const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
+  if (supabaseAnonKey) {
+    headers["apikey"] = supabaseAnonKey;
+  }
+  
   if (accessToken) {
     headers["Authorization"] = `Bearer ${accessToken}`;
   } else if (supabaseAnonKey) {
-    headers["apikey"] = supabaseAnonKey;
     headers["Authorization"] = `Bearer ${supabaseAnonKey}`;
   }
 

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { type ChatMessage, type Mood, type MoodEntry, type ReproductiveMode } from './mock';
+import { supabase } from '@/lib/supabase';
 import { api, type Profile, type PCOSScreeningInput, type PCOSScreeningResult, type SymptomTriageInput, type SymptomTriageResult } from '@/lib/api';
 
 export interface CycleLogItem {
@@ -132,10 +133,11 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
 
   const refreshAll = useCallback(async () => {
     try {
-      const session = await api.session();
-      if (!session.user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         setSignedIn(false);
         setUser(null);
+        setLoading(false);
         return;
       }
       setSignedIn(true);
@@ -229,9 +231,50 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+
   useEffect(() => {
-    refreshAll();
+    let mounted = true;
+    
+    // Initial fetch of session directly from Supabase
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (mounted) {
+        if (session?.user) {
+          setSignedIn(true);
+          setUser(session.user);
+          refreshAll();
+        } else {
+          setSignedIn(false);
+          setUser(null);
+          setLoading(false);
+        }
+      }
+    };
+    
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      if (session?.user) {
+        setSignedIn(true);
+        setUser(session.user);
+        if (event === 'SIGNED_IN') {
+          refreshAll();
+        }
+      } else {
+        setSignedIn(false);
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [refreshAll]);
+
 
   const updateProfile = async (patch: Partial<Profile>) => {
     setProfile((prev) => (prev ? { ...prev, ...patch } : (patch as Profile)));
