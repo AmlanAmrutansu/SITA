@@ -67,7 +67,7 @@ export interface SymptomTriageResult {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(init?.headers as Record<string, string> ?? {}) };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(init?.headers ?? {}) };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
