@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { type ChatMessage, type Mood, type MoodEntry, type ReproductiveMode } from './mock';
+import { toast } from "@/hooks/use-toast";
 import { api, type Profile, type PCOSScreeningInput, type PCOSScreeningResult, type SymptomTriageInput, type SymptomTriageResult } from '@/lib/api';
 import { supabase } from "../lib/supabase";
 
