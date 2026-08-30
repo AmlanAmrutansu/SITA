@@ -2,7 +2,7 @@ import { pgTable, uuid, text, integer, boolean, date, timestamp, jsonb, numeric 
 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(),
-  displayName: text("display_name").notNull().default("Tanvi"),
+  displayName: text("display_name").notNull().default("Friend"),
   reproductiveMode: text("reproductive_mode").notNull().default("not-pregnant"),
   privacyEnabled: boolean("privacy_enabled").notNull().default(true),
   onboardingComplete: boolean("onboarding_complete").notNull().default(false),

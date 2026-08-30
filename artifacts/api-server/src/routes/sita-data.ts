@@ -15,6 +15,7 @@ const allowedTables = new Set([
   "health_insights",
   "ai_conversations",
   "chat_messages",
+  "medical_records",
 ]);
 
 async function getAuthenticatedUser(token: string) {
@@ -125,7 +126,7 @@ router.delete("/data-purge", async (req: Request, res): Promise<void> => {
   }
 
   // Delete from child tables in sequence
-  for (const table of ["chat_messages", "ai_conversations", "screening_sessions", "health_insights", "postpartum_data", "pregnancy_data", "symptom_logs", "moods", "cycle_logs"]) {
+  for (const table of ["medical_records", "chat_messages", "ai_conversations", "screening_sessions", "health_insights", "postpartum_data", "pregnancy_data", "symptom_logs", "moods", "cycle_logs"]) {
     await supabaseRequest(`/rest/v1/${table}?user_id=eq.${user.id}`, { method: "DELETE" }, token).catch(() => null);
   }
   await supabaseRequest(`/rest/v1/profiles?id=eq.${user.id}`, { method: "DELETE" }, token).catch(() => null);

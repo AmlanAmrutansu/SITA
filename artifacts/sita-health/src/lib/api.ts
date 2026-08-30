@@ -124,16 +124,16 @@ export const api = {
   remove: (table: string, id: string) => request<void>(`/data/${table}/${id}`, { method: 'DELETE' }),
   removeByDate: (table: string, date: string) =>
     request<void>(`/data/${table}/by-date/${date}`, { method: 'DELETE' }),
-  chat: (text: string) => request<{ reply: string }>('/chat', { method: 'POST', body: JSON.stringify({ text }) }),
+  chat: (text: string, assessmentId?: string) => request<{ reply: string }>('/chat', { method: 'POST', body: JSON.stringify({ text, assessmentId }) }),
   chatHistory: () => request<{ messages: any[] }>('/chat/history'),
   clearChatHistory: () => request<{ message: string }>('/chat/history', { method: 'DELETE' }),
   pcosScreening: (input: PCOSScreeningInput) =>
-    request<{ result: PCOSScreeningResult; explanation: string }>('/screening/pcos', {
+    request<{ result: PCOSScreeningResult; explanation: string; id?: string }>('/screening/pcos', {
       method: 'POST',
       body: JSON.stringify(input),
     }),
   symptomTriage: (input: SymptomTriageInput) =>
-    request<{ result: SymptomTriageResult; explanation: string }>('/screening/triage', {
+    request<{ result: SymptomTriageResult; explanation: string; id?: string }>('/screening/triage', {
       method: 'POST',
       body: JSON.stringify(input),
     }),

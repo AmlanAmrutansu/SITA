@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import authRouter from "./auth";
 import dataRouter from "./sita-data";
 import chatRouter from "./chat";
+import medicalRecordsRouter from "./medical-records";
 
 const router: IRouter = Router();
 
@@ -17,5 +18,6 @@ router.use(healthRouter);
 router.use(authRouter);
 router.use(dataRouter);
 router.use(chatRouter);
+router.use(medicalRecordsRouter);
 
 export default router;

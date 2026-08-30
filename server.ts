@@ -5,7 +5,7 @@ import apiApp from "./artifacts/api-server/src/app";
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT || 3000);
+  const PORT = 3000;
 
   // Mount API routes first
   app.use(apiApp);

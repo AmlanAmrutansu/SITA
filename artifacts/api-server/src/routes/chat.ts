@@ -1,9 +1,15 @@
 import { Router, type IRouter, type Request } from "express";
 import { responseJson, supabaseRequest } from "../lib/supabase";
 import { evaluatePCOS, evaluateSymptomTriage, type PCOSScreeningInput, type SymptomTriageInput } from "../lib/screening";
+import { generateSitaResponse } from "../lib/ai-service";
+import { randomUUID } from "node:crypto";
 
 const router: IRouter = Router();
-const access = (req: Request) => (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.split(" ")[1] : req.cookies?.sita_access_token) as string | undefined;
+
+const access = (req: Request) =>
+  (req.headers.authorization?.startsWith("Bearer ")
+    ? req.headers.authorization.split(" ")[1]
+    : req.cookies?.sita_access_token) as string | undefined;
 
 async function getAuthenticatedUser(token: string) {
   const userResponse = await supabaseRequest("/auth/v1/user", { method: "GET" }, token);
@@ -11,115 +17,110 @@ async function getAuthenticatedUser(token: string) {
   return responseJson(userResponse);
 }
 
-async function callGemini(systemInstruction: string, contents: any[]): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return "SITA is currently running in local offline mode (GEMINI_API_KEY not configured). I am here to help you log and track your cycle, mood, and health markers safely.";
-  }
-
-  const model = "gemini-2.5-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-  try {
-    const aiResponse = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemInstruction }] },
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1000,
-        },
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const errBody = await aiResponse.text();
-      console.warn("[SITA AI] Gemini API returned error:", errBody);
-      return "SITA is taking a gentle pause. Please try your question again in a few moments.";
-    }
-
-    const aiData = (await aiResponse.json()) as any;
-    const reply = aiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-    return (
-      reply ||
-      "I hear you. While I process your thoughts, remember to prioritize your rest, hydration, and well-being today."
-    );
-  } catch (err) {
-    console.error("[SITA AI] Gemini fetch failed:", err);
-    return "I am currently unable to reach my AI service. Please check your connection or try again shortly.";
-  }
-}
-
 // 1. Unified SITA Chat Endpoint
-router.post("/chat", async (req: Request, res): Promise<void> => {
+router.post("/chat", async (req: Request, res: any): Promise<void> => {
   const token = access(req);
   if (!token) {
-    res.status(401).json({ message: "Please sign in to chat with SITA." });
-    return;
+    return res.status(401).json({ message: "Please sign in to chat with SITA." });
   }
 
   const user = await getAuthenticatedUser(token);
   if (!user?.id) {
-    res.status(401).json({ message: "Your session has expired." });
-    return;
+    return res.status(401).json({ message: "Your session has expired." });
   }
 
   const text = String(req.body?.text ?? "").trim();
+  const assessmentId = req.body?.assessmentId;
   if (!text) {
-    res.status(400).json({ message: "Message cannot be empty." });
-    return;
+    return res.status(400).json({ message: "Message cannot be empty." });
   }
 
-  // Fetch contextual user data securely (RLS guarantees only this user's data is accessed)
-  const [profileRes, recentMoodsRes, recentCyclesRes, pregRes, postRes, screeningRes] = await Promise.all([
-    supabaseRequest("/rest/v1/profiles?select=*&limit=1", { method: "GET" }, token),
-    supabaseRequest("/rest/v1/moods?select=mood,stress,energy,sleep,logged_at&order=logged_at.desc&limit=3", { method: "GET" }, token),
-    supabaseRequest("/rest/v1/cycle_logs?select=period_date,flow,cramps,symptoms&order=period_date.desc&limit=5", { method: "GET" }, token),
-    supabaseRequest("/rest/v1/pregnancy_data?select=*&limit=1", { method: "GET" }, token),
-    supabaseRequest("/rest/v1/postpartum_data?select=*&limit=1", { method: "GET" }, token),
-    supabaseRequest("/rest/v1/screening_sessions?select=*&order=created_at.desc&limit=2", { method: "GET" }, token),
-  ]);
+  try {
+    // Fetch contextual user data securely (RLS guarantees only this user's data is accessed)
+    const [profileRes, recentMoodsRes, recentCyclesRes, pregRes, postRes, screeningRes, symptomRes, specificScreeningRes, medicalRecordsRes] = await Promise.all([
+      supabaseRequest("/rest/v1/profiles?select=*&limit=1", { method: "GET" }, token),
+      supabaseRequest("/rest/v1/moods?select=mood,stress,energy,sleep,logged_at&order=logged_at.desc&limit=3", { method: "GET" }, token),
+      supabaseRequest("/rest/v1/cycle_logs?select=period_date,flow,cramps,symptoms&order=period_date.desc&limit=5", { method: "GET" }, token),
+      supabaseRequest("/rest/v1/pregnancy_data?select=*&order=id.desc&limit=1", { method: "GET" }, token),
+      supabaseRequest("/rest/v1/postpartum_data?select=*&order=id.desc&limit=1", { method: "GET" }, token),
+      supabaseRequest("/rest/v1/screening_sessions?select=*&order=created_at.desc&limit=2", { method: "GET" }, token),
+      supabaseRequest("/rest/v1/symptom_logs?select=symptom,category,severity,logged_at&order=logged_at.desc&limit=5", { method: "GET" }, token),
+      assessmentId ? supabaseRequest(`/rest/v1/screening_sessions?id=eq.${encodeURIComponent(assessmentId)}&select=*`, { method: "GET" }, token) : Promise.resolve(null),
+      supabaseRequest("/rest/v1/medical_records?select=title,document_type,document_date,structured_data&order=document_date.desc&limit=5", { method: "GET" }, token),
+    ]);
 
-  const profile = profileRes.ok ? (await responseJson(profileRes))?.[0] : null;
-  const recentMoods = recentMoodsRes.ok ? await responseJson(recentMoodsRes) : [];
-  const recentCycles = recentCyclesRes.ok ? await responseJson(recentCyclesRes) : [];
-  const pregData = pregRes.ok ? (await responseJson(pregRes))?.[0] : null;
-  const postData = postRes.ok ? (await responseJson(postRes))?.[0] : null;
-  const recentScreenings = (screeningRes && screeningRes.ok) ? await responseJson(screeningRes) : [];
+    const profile = profileRes.ok ? (await responseJson(profileRes))?.[0] : null;
+    const recentMoods = recentMoodsRes.ok ? await responseJson(recentMoodsRes) : [];
+    const recentCycles = recentCyclesRes.ok ? await responseJson(recentCyclesRes) : [];
+    const pregData = pregRes.ok ? (await responseJson(pregRes))?.[0] : null;
+    const recentSymptoms = (symptomRes && symptomRes.ok) ? await responseJson(symptomRes) : [];
+    const medicalRecords = (medicalRecordsRes && medicalRecordsRes.ok) ? await responseJson(medicalRecordsRes) : [];
+    const specificScreening = (specificScreeningRes && specificScreeningRes.ok) ? (await responseJson(specificScreeningRes))?.[0] : null;
+    const postData = postRes.ok ? (await responseJson(postRes))?.[0] : null;
+    const recentScreenings = (screeningRes && screeningRes.ok) ? await responseJson(screeningRes) : [];
 
-  const displayName = profile?.display_name || "friend";
-  const mode = profile?.reproductive_mode || "not-pregnant";
+    const displayName = profile?.display_name || "friend";
+    const mode = profile?.reproductive_mode || "not-pregnant";
 
-  let userContext = `User Profile:\n- Name: ${displayName}\n- Reproductive Mode: ${mode}`;
-  if (mode === "not-pregnant") {
-    userContext += `\n- Typical cycle length: ${profile?.typical_cycle_length || 28} days\n- Typical period length: ${profile?.typical_period_length || 5} days\n- Last period: ${profile?.last_period_date || "not recorded"}`;
-    if (recentCycles.length > 0) {
-      userContext += `\n- Recent logged period dates: ${recentCycles.map((c: any) => `${c.period_date} (Flow: ${c.flow || "normal"}, Cramps: ${c.cramps ?? "n/a"}/10)`).join("; ")}`;
+    let userContext = `User Profile:\n- Name: ${displayName}\n- Reproductive Mode: ${mode}`;
+
+    if (mode === "not-pregnant") {
+      userContext += `\n- Typical cycle length: ${profile?.typical_cycle_length || 28} days\n- Typical period length: ${profile?.typical_period_length || 5} days\n- Last period: ${profile?.last_period_date || "not recorded"}`;
+      if (recentCycles.length > 0) {
+        userContext += `\n- Recent logged period dates: ${recentCycles.map((c: any) => `${c.period_date} (Flow: ${c.flow || "normal"}, Cramps: ${c.cramps ?? "n/a"}/10)`).join("; ")}`;
+      }
+    } else if (mode === "pregnant" && pregData) {
+      userContext += `\n- Pregnancy Due Date: ${pregData.due_date || "not set"}\n- Kicks recorded: ${pregData.kick_count || 0}\n- Pregnancy symptoms: ${(pregData.symptoms || []).join(", ") || "none"}`;
+    } else if (mode === "postpartum" && postData) {
+      userContext += `\n- Childbirth date: ${postData.birth_date || "not set"}\n- Bleeding level: ${postData.bleeding_level || "not recorded"}\n- Recovery stage: ${postData.recovery_stage || "general"}\n- Sleep hours: ${postData.sleep_hours || "unspecified"}`;
     }
-  } else if (mode === "pregnant" && pregData) {
-    userContext += `\n- Pregnancy Due Date: ${pregData.due_date || "not set"}\n- Kicks recorded: ${pregData.kick_count || 0}\n- Pregnancy symptoms: ${(pregData.symptoms || []).join(", ") || "none"}`;
-  } else if (mode === "postpartum" && postData) {
-    userContext += `\n- Childbirth date: ${postData.birth_date || "not set"}\n- Bleeding level: ${postData.bleeding_level || "not recorded"}\n- Recovery stage: ${postData.recovery_stage || "general"}\n- Sleep hours: ${postData.sleep_hours || "unspecified"}`;
-  }
 
-  if (recentMoods.length > 0) {
-    userContext += `\n- Recent moods: ${recentMoods.map((m: any) => `${m.logged_at}: ${m.mood} (Stress ${m.stress}/10, Energy ${m.energy}/10)`).join("; ")}`;
-  }
-  if (recentScreenings && recentScreenings.length > 0) {
-    userContext += `\n- Recent health assessments:\n`;
-    recentScreenings.forEach((s: any) => {
-      userContext += `  * ${s.screening_type} (${s.created_at}): Risk Level: ${s.risk_level}. Summary: ${s.summary_explanation.slice(0,100)}...\n`;
-    });
-  }
+    if (recentSymptoms.length > 0) {
+      userContext += `\n- Recent symptoms logged:\n`;
+      recentSymptoms.forEach((s: any) => {
+        userContext += `  * ${s.symptom} (Category: ${s.category || 'General'}, Severity: ${s.severity || 'Unspecified'}, Date: ${s.logged_at})\n`;
+      });
+    }
+    if (recentMoods.length > 0) {
+      userContext += `\n- Recent moods: ${recentMoods.map((m: any) => `${m.logged_at}: ${m.mood} (Stress ${m.stress}/10, Energy ${m.energy}/10)`).join("; ")}`;
+    }
 
-  if (profile?.health_notes) {
-    userContext += `\n- User health notes: ${profile.health_notes}`;
-  }
+    if (recentScreenings && recentScreenings.length > 0) {
+      userContext += `\n- Recent health assessments:\n`;
+      recentScreenings.forEach((s: any) => {
+        userContext += `  * ${s.screening_type} (ID: ${s.id}, Date: ${s.created_at}): Risk Level: ${s.risk_level}. Summary: ${s.summary_explanation || ""}\n`;
+      });
+    }
 
-  const systemInstruction = `You are SITA (Smart Intelligence for Treatment & Awareness), a compassionate, knowledgeable women's health companion.
+    if (profile?.health_notes) {
+      userContext += `\n- User health notes: ${profile.health_notes}`;
+    }
 
+    if (medicalRecords && medicalRecords.length > 0) {
+      userContext += `\n- Recent Medical Records / Documents:\n`;
+      medicalRecords.forEach((r) => {
+        userContext += `  * Title: ${r.title} (${r.document_type}, Date: ${r.document_date})\n`;
+        if (r.structured_data) {
+          if (r.structured_data.medicines && r.structured_data.medicines.length > 0) {
+            userContext += `    - Medicines: ${r.structured_data.medicines.join(', ')}\n`;
+          }
+          if (r.structured_data.doctor_name) {
+            userContext += `    - Doctor: ${r.structured_data.doctor_name}\n`;
+          }
+          if (r.structured_data.notes) {
+            userContext += `    - Notes: ${r.structured_data.notes}\n`;
+          }
+        }
+      });
+    }
+
+
+    
+    if (specificScreening) {
+      userContext += `\n\n[ACTIVE ASSESSMENT SUBMISSION]:\nThe user has just completed a specific assessment and is asking about it. Use this detailed data for your response:\n- Assessment ID: ${specificScreening.id}\n- Type: ${specificScreening.screening_type}\n- Risk Level: ${specificScreening.risk_level}\n- AI Summary generated at time of assessment: ${specificScreening.summary_explanation}\n- Raw Data: ${JSON.stringify(specificScreening.structured_result)}\n`;
+    }
+
+    const systemInstruction = `You are SITA (Smart Intelligence for Treatment & Awareness), a compassionate, knowledgeable women's health companion.
 GUIDING PRINCIPLES:
 1. Warmth & Empathy: Speak with gentle reassurance, active listening, and clear, supportive language. Use formatting like bullet points when helpful.
 2. Non-Diagnostic: You provide health information, physiological context, lifestyle suggestions, and awareness. NEVER claim certainty or state "You have [Condition]". Always frame as possibilities (e.g. "Symptoms like these are commonly associated with...").
@@ -130,177 +131,234 @@ GUIDING PRINCIPLES:
 CURRENT USER CONTEXT:
 ${userContext}`;
 
-  // Fetch recent conversation history from Supabase
-  const messagesResponse = await supabaseRequest(
-    "/rest/v1/chat_messages?select=role,content&order=created_at.asc&limit=16",
-    { method: "GET" },
-    token,
-  );
-  const history = messagesResponse.ok ? await responseJson(messagesResponse) : [];
+    // Fetch recent conversation history from Supabase
+    const messagesResponse = await supabaseRequest(
+      "/rest/v1/chat_messages?select=role,content&order=created_at.asc&limit=16",
+      { method: "GET" },
+      token,
+    );
+    const history = messagesResponse.ok ? await responseJson(messagesResponse) : [];
 
-  const contents = [...(history || []), { role: "user", content: text }].map((message: any) => ({
-    role: message.role === "assistant" ? "model" : "user",
-    parts: [{ text: message.content }],
-  }));
+    const contents = [...(history || []), { role: "user", content: text }].map((message: any) => ({
+      role: message.role === "assistant" ? "model" : "user",
+      parts: [{ text: message.content }],
+    }));
 
-  const reply = await callGemini(systemInstruction, contents);
+    const reply = await generateSitaResponse(systemInstruction, contents);
 
-  // Persist both user message and assistant reply
-  await supabaseRequest(
-    "/rest/v1/chat_messages",
-    {
-      method: "POST",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify([
-        { user_id: user.id, role: "user", content: text },
-        { user_id: user.id, role: "assistant", content: reply },
-      ]),
-    },
-    token,
-  ).catch(console.error);
-
-  res.json({ reply });
+    // Persist both user message and assistant reply
+    await supabaseRequest(
+      "/rest/v1/chat_messages",
+      {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify([
+          { user_id: user.id, role: "user", content: text },
+          { user_id: user.id, role: "assistant", content: reply },
+        ]),
+      },
+      token,
+    );
+    res.json({ reply });
+  } catch (error: any) {
+    const requestId = randomUUID();
+    console.error(`[Error - ${requestId}]:`, error);
+    const isConfigError = error?.message?.includes("AI_PROVIDER_NOT_CONFIGURED");
+    const isModelUnavailable = error?.message?.includes("AI_MODEL_UNAVAILABLE");
+    
+    let code = "AI_PROVIDER_ERROR";
+    let message = "SITA could not reach the AI service right now.";
+    let status = 500;
+    
+    if (isConfigError) {
+      code = "AI_PROVIDER_NOT_CONFIGURED";
+      message = "GROQ_API_KEY is not configured.";
+      status = 503;
+    } else if (isModelUnavailable) {
+      code = "AI_MODEL_UNAVAILABLE";
+      message = "The selected AI model is currently unavailable or decommissioned. Please try again later or contact support.";
+      status = 503;
+    }
+    
+    res.status(status).json({
+      success: false,
+      requestId,
+      code,
+      message
+    });
+  }
 });
 
 // 2. Deterministic PCOS Screening + AI Explanation
-router.post("/screening/pcos", async (req: Request, res): Promise<void> => {
+router.post("/screening/pcos", async (req: Request, res: any): Promise<void> => {
   try {
-  const token = access(req);
-  if (!token) {
-    res.status(401).json({ message: "Please sign in to take the PCOS screening." });
-    return;
-  }
-  const user = await getAuthenticatedUser(token);
-  if (!user?.id) {
-    res.status(401).json({ message: "Your session has expired." });
-    return;
-  }
+    const token = access(req);
+    if (!token) {
+      return res.status(401).json({ message: "Please sign in to take the PCOS screening." });
+    }
 
-  const input: PCOSScreeningInput = req.body;
-  const structuredResult = evaluatePCOS(input);
+    const user = await getAuthenticatedUser(token);
+    if (!user?.id) {
+      return res.status(401).json({ message: "Your session has expired." });
+    }
 
-  const prompt = `As SITA, explain the following structured PCOS screening result gently and clearly to the user.
-Structured Result:
-- Risk Level: ${structuredResult.riskLevel}
-- Score: ${structuredResult.score}
-- Criteria Matched: ${structuredResult.criteriaMatched.join(", ") || "None"}
-- Summary: ${structuredResult.summary}
-- Recommendations: ${structuredResult.recommendations.join("; ")}
+    const input: PCOSScreeningInput = req.body;
+    const structuredResult = evaluatePCOS(input);
 
-Explain that this is an awareness screening, not a definitive diagnosis, and highlight what questions they might bring to an OB/GYN or healthcare provider. Keep the tone calm, warm, and empowering.`;
+const explanation = "Your assessment has been saved. SITA is ready to discuss the results.";
 
-  const explanation = await callGemini("You are SITA, a warm women's health companion.", [
-    { role: "user", parts: [{ text: prompt }] },
-  ]);
-
-  // Persist screening result to Supabase
-  await supabaseRequest(
-    "/rest/v1/screening_sessions",
-    {
-      method: "POST",
-      body: JSON.stringify({
-        user_id: user.id,
-        screening_type: "pcos",
-        answers: input,
-        structured_result: structuredResult,
-        risk_level: structuredResult.riskLevel,
-        summary_explanation: explanation,
-      }),
-    },
-    token,
-  ).catch(console.error);
-
-  res.json({ result: structuredResult, explanation });
+    // Persist screening result to Supabase
+    const insertRes = await supabaseRequest(
+      "/rest/v1/screening_sessions",
+      {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          user_id: user.id,
+          screening_type: "pcos",
+          answers: input,
+          structured_result: structuredResult,
+          risk_level: structuredResult.riskLevel,
+          summary_explanation: "Assessment completed",
+        }),
+      },
+      token
+    );
+    let id = null;
+    if (insertRes.ok) {
+      const data = await insertRes.json();
+      if (data && data.length > 0) id = data[0].id;
+    }
+    res.json({ result: structuredResult, explanation, id });
   } catch (error: any) {
-    console.error("[PCOS Screening Error]:", error);
-    res.status(500).json({ message: error.message || "Internal server error during PCOS screening." });
+    const requestId = randomUUID();
+    console.error(`[Error - ${requestId}]:`, error);
+    const isConfigError = error?.message?.includes("AI_PROVIDER_NOT_CONFIGURED");
+    const isModelUnavailable = error?.message?.includes("AI_MODEL_UNAVAILABLE");
+    
+    let code = "AI_PROVIDER_ERROR";
+    let message = "SITA could not reach the AI service right now.";
+    let status = 500;
+    
+    if (isConfigError) {
+      code = "AI_PROVIDER_NOT_CONFIGURED";
+      message = "GROQ_API_KEY is not configured.";
+      status = 503;
+    } else if (isModelUnavailable) {
+      code = "AI_MODEL_UNAVAILABLE";
+      message = "The selected AI model is currently unavailable or decommissioned. Please try again later or contact support.";
+      status = 503;
+    }
+    
+    res.status(status).json({
+      success: false,
+      requestId,
+      code,
+      message
+    });
   }
 });
 
 // 3. Deterministic Symptom Triage + AI Explanation
-router.post("/screening/triage", async (req: Request, res): Promise<void> => {
+router.post("/screening/triage", async (req: Request, res: any): Promise<void> => {
   try {
-  const token = access(req);
-  if (!token) {
-    res.status(401).json({ message: "Please sign in to access symptom triage." });
-    return;
-  }
-  const user = await getAuthenticatedUser(token);
-  if (!user?.id) {
-    res.status(401).json({ message: "Your session has expired." });
-    return;
-  }
+    const token = access(req);
+    if (!token) {
+      return res.status(401).json({ message: "Please sign in to access symptom triage." });
+    }
 
-  const input: SymptomTriageInput = req.body;
-  const structuredResult = evaluateSymptomTriage(input);
+    const user = await getAuthenticatedUser(token);
+    if (!user?.id) {
+      return res.status(401).json({ message: "Your session has expired." });
+    }
 
-  const prompt = `As SITA, provide a calm, reassuring breakdown of this symptom triage assessment:
-- Symptom: ${input.symptom} (Duration: ${input.durationDays} days, Severity: ${input.severity})
-- Category: ${structuredResult.category}
-- Risk Level: ${structuredResult.riskLevel}
-- Key Actions: ${structuredResult.actionSteps.join("; ")}
+    const input: SymptomTriageInput = req.body;
+    const structuredResult = evaluateSymptomTriage(input);
 
-Provide comforting yet practical advice. If prompt evaluation is advised, explain gently why an in-person check is recommended.`;
+const explanation = "Your symptom triage has been saved. SITA is ready to discuss the results.";
 
-  const explanation = await callGemini("You are SITA, a warm women's health companion.", [
-    { role: "user", parts: [{ text: prompt }] },
-  ]);
-
-  // Persist triage session
-  await supabaseRequest(
-    "/rest/v1/screening_sessions",
-    {
-      method: "POST",
-      body: JSON.stringify({
-        user_id: user.id,
-        screening_type: "symptom_triage",
-        answers: input,
-        structured_result: structuredResult,
-        risk_level: structuredResult.riskLevel,
-        summary_explanation: explanation,
-      }),
-    },
-    token,
-  ).catch(console.error);
-
-  res.json({ result: structuredResult, explanation });
+    // Persist triage session
+    const insertRes = await supabaseRequest(
+      "/rest/v1/screening_sessions",
+      {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          user_id: user.id,
+          screening_type: "symptom_triage",
+          answers: input,
+          structured_result: structuredResult,
+          risk_level: structuredResult.riskLevel,
+          summary_explanation: "Assessment completed",
+        }),
+      },
+      token
+    );
+    let id = null;
+    if (insertRes.ok) {
+      const data = await insertRes.json();
+      if (data && data.length > 0) id = data[0].id;
+    }
+    res.json({ result: structuredResult, explanation, id });
   } catch (error: any) {
-    console.error("[Symptom Triage Error]:", error);
-    res.status(500).json({ message: error.message || "Internal server error during Symptom triage." });
+    const requestId = randomUUID();
+    console.error(`[Error - ${requestId}]:`, error);
+    const isConfigError = error?.message?.includes("AI_PROVIDER_NOT_CONFIGURED");
+    const isModelUnavailable = error?.message?.includes("AI_MODEL_UNAVAILABLE");
+    
+    let code = "AI_PROVIDER_ERROR";
+    let message = "SITA could not reach the AI service right now.";
+    let status = 500;
+    
+    if (isConfigError) {
+      code = "AI_PROVIDER_NOT_CONFIGURED";
+      message = "GROQ_API_KEY is not configured.";
+      status = 503;
+    } else if (isModelUnavailable) {
+      code = "AI_MODEL_UNAVAILABLE";
+      message = "The selected AI model is currently unavailable or decommissioned. Please try again later or contact support.";
+      status = 503;
+    }
+    
+    res.status(status).json({
+      success: false,
+      requestId,
+      code,
+      message
+    });
   }
 });
 
 // 4. Chat history & conversation management
-router.get("/chat/history", async (req: Request, res): Promise<void> => {
+router.get("/chat/history", async (req: Request, res: any): Promise<void> => {
   const token = access(req);
   if (!token) {
-    res.json({ messages: [] });
-    return;
+    return res.json({ messages: [] });
   }
+
   const response = await supabaseRequest(
     "/rest/v1/chat_messages?select=id,role,content,created_at&order=created_at.asc&limit=50",
     { method: "GET" },
     token,
   );
   if (!response.ok) {
-    res.json({ messages: [] });
-    return;
+    return res.json({ messages: [] });
   }
+
   const messages = await responseJson(response);
   res.json({ messages });
 });
 
-router.delete("/chat/history", async (req: Request, res): Promise<void> => {
+router.delete("/chat/history", async (req: Request, res: any): Promise<void> => {
   const token = access(req);
   if (!token) {
-    res.status(401).json({ message: "Please sign in." });
-    return;
+    return res.status(401).json({ message: "Please sign in." });
   }
   const user = await getAuthenticatedUser(token);
   if (!user?.id) {
-    res.status(401).json({ message: "Session expired." });
-    return;
+    return res.status(401).json({ message: "Session expired." });
   }
+
   await supabaseRequest(`/rest/v1/chat_messages?user_id=eq.${user.id}`, { method: "DELETE" }, token);
   res.json({ message: "Chat history cleared." });
 });

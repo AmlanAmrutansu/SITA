@@ -1,6 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import type { FormEvent, ChangeEvent, MouseEvent } from 'react';
 import type { ReactNode } from 'react';
-import { Link, useLocation } from 'wouter';
+import { Link, useLocation, useSearch } from 'wouter';
 import {
   Activity,
   ArrowLeft,
@@ -45,6 +46,8 @@ import {
   Utensils,
   Wind,
   X,
+  Paperclip,
+  FilePlus,
 } from 'lucide-react';
 import { AppShell, SitaLogo, OriginalSitaMark } from '@/components/AppShell';
 import { SitaAvatar, WellnessIllustration } from '@/components/Illustration';
@@ -94,94 +97,51 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean; onClose:
 // ==========================================
 // 1. WELCOME PAGE
 // ==========================================
-export function WelcomePage() {
-  const [, setLocation] = useLocation();
-
-  return (
-    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden bg-[#faf7f9] px-6 py-12 selection:bg-[#fce8ef] selection:text-[#5d4662]">
-      <div className="absolute -left-32 top-[-10%] h-[40rem] w-[40rem] animate-pulse rounded-full bg-[#fce8ef] opacity-50 blur-[120px] duration-[8000ms]" />
-      <div className="absolute -right-32 bottom-[-10%] h-[45rem] w-[45rem] animate-pulse rounded-full bg-[#ebe4f5] opacity-50 blur-[140px] duration-[10000ms]" />
-      
-      <div className="relative z-10 flex w-full max-w-[480px] flex-col items-center text-center">
-        <div className="fade-up mb-8 flex justify-center">
-          <OriginalSitaMark className="h-28 w-28 drop-shadow-[0_12px_24px_rgba(212,100,137,0.15)]" />
-        </div>
-        
-        <div className="fade-up fade-up-1">
-          <h1 className="mb-4 font-display text-[4rem] leading-none tracking-[-.04em] text-[#4c3850]">
-            SITA
-          </h1>
-          <h2 className="mx-auto mb-10 max-w-[300px] text-[11px] font-bold uppercase leading-[1.8] tracking-[0.2em] text-[#9b8599]">
-            Smart Intelligence for<br />Treatment &amp; Awareness
-          </h2>
-        </div>
-
-        <div className="fade-up fade-up-2 mb-12 relative w-full overflow-hidden rounded-[2.5rem] border border-white/60 bg-white/40 p-8 shadow-[0_8px_32px_rgba(152,126,145,0.08),inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-2xl">
-          <p className="font-display text-[1.4rem] leading-snug text-[#5d4662]">
-            Your health.<br />
-            <span className="text-[#9f6a80]">Your journey.</span><br />
-            Your SITA.
-          </p>
-          <p className="mx-auto mt-5 max-w-[280px] text-[14px] leading-relaxed text-[#7a6575]">
-            A private, intelligent space made for understanding your reproductive wellness, cycle, and mood.
-          </p>
-        </div>
-
-        <div className="fade-up fade-up-3 flex w-full flex-col gap-4 sm:flex-row">
-          <button
-            onClick={() => setLocation('/auth?mode=signup')}
-            className="group flex w-full items-center justify-center gap-3 rounded-full bg-[#5d4662] px-6 py-4 text-[14px] font-bold text-white shadow-[0_8px_20px_rgba(93,70,98,.2)] transition-all hover:-translate-y-0.5 hover:bg-[#4a364e] hover:shadow-[0_12px_24px_rgba(93,70,98,.3)]"
-          >
-            Get Started <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </button>
-          <button
-            onClick={() => setLocation('/auth?mode=signin')}
-            className="flex w-full items-center justify-center rounded-full border-2 border-[#5d4662]/10 bg-white/50 px-6 py-4 text-[14px] font-bold text-[#5d4662] backdrop-blur-md transition-all hover:bg-white/80"
-          >
-            Sign In
-          </button>
-        </div>
-
-        <div className="fade-up fade-up-3 mt-10 flex items-center justify-center gap-2.5 text-[10px] font-bold uppercase tracking-widest text-[#a895a5]">
-          <ShieldCheck className="h-3.5 w-3.5" /> Privacy first. Always.
-        </div>
-      </div>
-    </div>
-  );
-}
+export { WelcomePage } from './welcome-page';
 
 // ==========================================
-// AUTH PAGE
+// 2. AUTH PAGE
 // ==========================================
 export function AuthPage() {
   const [, setLocation] = useLocation();
-  const { refreshAll } = useSitaStore();
-  const [signup, setSignup] = useState(() => new URLSearchParams(window.location.search).get('mode') === 'signup');
+  const searchString = useSearch();
+  const search = new URLSearchParams(searchString);
+  const modeParam = search.get('mode');
+  const [signup, setSignup] = useState(modeParam === 'signup');
+
+  useEffect(() => {
+    setSignup(modeParam === 'signup');
+  }, [modeParam]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [oauthError] = useState(() => new URLSearchParams(window.location.search).get('error'));
+  const [error, setError] = useState('');
+  const [oauthError, setOauthError] = useState(false);
+  const { refreshAll } = useSitaStore();
 
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    setBusy(true);
+  async function submit(e: FormEvent) {
+    e.preventDefault();
     setError('');
+    setOauthError(false);
+    
     if (signup && password !== confirmPassword) {
-      setError('Passwords do not match.');
-      setBusy(false);
+      setError('Passwords do not match');
       return;
     }
+
+    setBusy(true);
     try {
-      const result = signup ? await api.signup(email, password, name) : await api.login(email, password);
-      await refreshAll();
-      if (signup && 'needsEmailConfirmation' in result && result.needsEmailConfirmation) {
-        setError('Check your email to confirm your account, then sign in.');
+      if (signup) {
+        await api.signup(email, password, name || 'Friend');
       } else {
-        setLocation(signup ? '/onboarding' : '/');
+        await api.login(email, password);
       }
+      if (refreshAll) {
+        await refreshAll();
+      }
+      setLocation('/');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to continue.');
     } finally {
@@ -243,7 +203,8 @@ export function AuthPage() {
     setBusy(true);
     setError('');
     try {
-      await api.resetPassword(email);
+      // @ts-ignore
+      if (api.resetPassword) await api.resetPassword(email);
       setError('Password reset instructions have been sent to your email.');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to reset password.');
@@ -253,14 +214,12 @@ export function AuthPage() {
   }}>Forgot password?</button>
              </div>
           )}
-
           {error && <p className="mt-5 rounded-2xl bg-[#fff0f3] px-4 py-3 text-xs font-semibold text-[#b55778]">{error}</p>}
           
           <button disabled={busy} className="mt-7 w-full rounded-full bg-[#5d4662] px-5 py-4 text-[13px] font-bold text-white shadow-[0_8px_16px_rgba(93,70,98,.2)] transition-all hover:-translate-y-0.5 hover:bg-[#4a364e] disabled:opacity-60">
             {busy ? 'One moment…' : signup ? 'Create account' : 'Sign in'}
           </button>
           
-
         </form>
         
         <button
@@ -277,23 +236,40 @@ export function AuthPage() {
 // ==========================================
 // ONBOARDING PAGE
 // ==========================================
+
 export function OnboardingPage() {
   const [, setLocation] = useLocation();
-  const { mode, setMode, updateProfile } = useSitaStore();
-  const [name, setName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [cycleLength, setCycleLength] = useState('28');
-  const [periodLength, setPeriodLength] = useState('5');
-  const [lastPeriod, setLastPeriod] = useState('');
-  const [healthNotes, setHealthNotes] = useState('');
+  const { mode, setMode, updateProfile, updatePregnancyData, updatePostpartumData, profile } = useSitaStore();
+
+  // Account / General
+  const [name, setName] = useState(profile?.display_name || '');
+  const [dateOfBirth, setDateOfBirth] = useState(profile?.date_of_birth || '');
+  const [healthNotes, setHealthNotes] = useState(profile?.health_notes || '');
+
+  // Cycle Mode
+  const [cycleLength, setCycleLength] = useState(String(profile?.typical_cycle_length || 28));
+  const [periodLength, setPeriodLength] = useState(String(profile?.typical_period_length || 5));
+  const [lastPeriod, setLastPeriod] = useState(profile?.last_period_date || '');
+
+  // Pregnancy Mode
+  const [dueDate, setDueDate] = useState('');
+  const [pregnancyStartDate, setPregnancyStartDate] = useState('');
+
+  // Postpartum Mode
+  const [birthDate, setBirthDate] = useState('');
+  const [bleedingLevel, setBleedingLevel] = useState('light');
+
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
     setError('');
+    setBusy(true);
+
     try {
+      if (!name.trim()) throw new Error("Please enter your name or nickname.");
+      
       await updateProfile({
         display_name: name.trim(),
         date_of_birth: dateOfBirth || null,
@@ -304,6 +280,21 @@ export function OnboardingPage() {
         health_notes: healthNotes.trim() || null,
         onboarding_complete: true,
       });
+
+      if (mode === 'pregnant') {
+        if (!dueDate) throw new Error("Please provide your estimated due date.");
+        await updatePregnancyData({
+          due_date: dueDate || undefined,
+          pregnancy_start_date: pregnancyStartDate || undefined,
+        });
+      } else if (mode === 'postpartum') {
+        if (!birthDate) throw new Error("Please provide your childbirth date.");
+        await updatePostpartumData({
+          birth_date: birthDate || undefined,
+          bleeding_level: bleedingLevel as any,
+        });
+      }
+
       setLocation(mode === 'pregnant' ? '/pregnancy' : mode === 'postpartum' ? '/postpartum' : '/');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to save your details.');
@@ -313,62 +304,132 @@ export function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-[#fffafa] px-5 py-8 sm:grid sm:place-items-center">
-      <form onSubmit={submit} className="mx-auto w-full max-w-xl">
-        <p className="mb-2 text-[11px] font-bold uppercase tracking-[.18em] text-[#b7829a]">A little context helps</p>
-        <h1 className="font-display text-4xl text-[#4d394e]">Personalize your SITA</h1>
-        <p className="mt-2 text-xs leading-relaxed text-[#8d7587]">Only share what feels useful. You can change these details anytime in Profile.</p>
-        <div className="mt-6 rounded-[28px] border border-[#f0e0e8] bg-white p-6 shadow-[0_18px_50px_rgba(89,55,76,.08)]">
-          <label className="mb-4 block text-xs font-bold text-[#765f71]">
-            Your Name / Nickname
-            <input required value={name} onChange={(e) => setName(e.target.value)} className="sita-input mt-2" />
-          </label>
-          <label className="mb-4 block text-xs font-bold text-[#765f71]">
-            Date of birth <span className="font-normal text-[#b09aa7]">(optional)</span>
-            <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className="sita-input mt-2" />
-          </label>
-          <p className="mb-2 text-xs font-bold text-[#765f71]">Your current reproductive stage</p>
-          <div className="mb-5 grid gap-2 sm:grid-cols-3">
-            {(['not-pregnant', 'pregnant', 'postpartum'] as ReproductiveMode[]).map((item) => (
-              <button
-                type="button"
-                key={item}
-                onClick={() => setMode(item)}
-                className={`rounded-2xl border px-3 py-3 text-xs font-bold transition ${mode === item ? 'border-[#e889a6] bg-[#fff0f4] text-[#b55778]' : 'border-[#eee2e8] text-[#927e8d]'}`}
-              >
-                {modeDetails[item].title}
-              </button>
-            ))}
-          </div>
-          {mode === 'not-pregnant' && (
-            <div className="grid gap-4 sm:grid-cols-3">
-              <label className="block text-xs font-bold text-[#765f71]">
-                Cycle length
-                <input type="number" min="15" max="60" required value={cycleLength} onChange={(e) => setCycleLength(e.target.value)} className="sita-input mt-2" />
+    <div className="min-h-dvh bg-[#fffafa] px-5 py-12 sm:grid sm:place-items-center">
+      <form onSubmit={submit} className="mx-auto w-full max-w-2xl">
+        <div className="text-center sm:text-left">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[.18em] text-[#b7829a]">A little context helps</p>
+          <h1 className="font-display text-4xl text-[#4d394e]">Personalize your SITA</h1>
+          <p className="mt-3 text-sm leading-relaxed text-[#8d7587]">Only share what feels useful. You can change these details anytime in your Profile settings.</p>
+        </div>
+
+        <div className="mt-8 space-y-8 rounded-[32px] border border-[#f0e0e8] bg-white p-8 shadow-[0_18px_50px_rgba(89,55,76,.08)] sm:p-10">
+          
+          {/* Section: Personal Information */}
+          <section className="space-y-5">
+            <h2 className="text-sm font-bold tracking-wide text-[#765f71] uppercase border-b border-[#f0e0e8] pb-2">Personal Information</h2>
+            <div className="grid gap-6 sm:grid-cols-2">
+              <label className="block text-sm font-bold text-[#765f71]">
+                Your Name / Nickname <span className="text-[#e889a6]">*</span>
+                <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Maya" className="sita-input mt-2 w-full text-base" />
               </label>
-              <label className="block text-xs font-bold text-[#765f71]">
-                Period length
-                <input type="number" min="1" max="15" required value={periodLength} onChange={(e) => setPeriodLength(e.target.value)} className="sita-input mt-2" />
-              </label>
-              <label className="block text-xs font-bold text-[#765f71]">
-                Last period
-                <input type="date" value={lastPeriod} onChange={(e) => setLastPeriod(e.target.value)} className="sita-input mt-2" />
+              <label className="block text-sm font-bold text-[#765f71]">
+                Date of Birth <span className="font-normal text-[#b09aa7]">(optional)</span>
+                <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className="sita-input mt-2 w-full text-base" />
               </label>
             </div>
+          </section>
+
+          {/* Section: Reproductive Stage */}
+          <section className="space-y-5">
+            <h2 className="text-sm font-bold tracking-wide text-[#765f71] uppercase border-b border-[#f0e0e8] pb-2">Reproductive Stage</h2>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {(['not-pregnant', 'pregnant', 'postpartum'] as ReproductiveMode[]).map((item) => (
+                <button
+                  type="button"
+                  key={item}
+                  onClick={() => setMode(item)}
+                  className={`rounded-2xl border px-4 py-4 text-sm font-bold transition ${mode === item ? 'border-[#e889a6] bg-[#fff0f4] text-[#b55778] shadow-sm' : 'border-[#eee2e8] text-[#927e8d] hover:bg-[#faf6f8]'}`}
+                >
+                  {modeDetails[item].title}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Section: Dynamic Stage Information */}
+          <section>
+            {mode === 'not-pregnant' && (
+              <div className="rounded-[24px] bg-[#faf6f8] p-6 space-y-5 border border-[#eee2e8]">
+                <h3 className="text-sm font-bold text-[#765f71]">Cycle Information</h3>
+                <div className="grid gap-6 sm:grid-cols-3">
+                  <label className="block text-sm font-bold text-[#765f71]">
+                    Cycle length (days)
+                    <input type="number" min="15" max="60" required value={cycleLength} onChange={(e) => setCycleLength(e.target.value)} className="sita-input mt-2 w-full text-base" />
+                  </label>
+                  <label className="block text-sm font-bold text-[#765f71]">
+                    Period length (days)
+                    <input type="number" min="1" max="15" required value={periodLength} onChange={(e) => setPeriodLength(e.target.value)} className="sita-input mt-2 w-full text-base" />
+                  </label>
+                  <label className="block text-sm font-bold text-[#765f71]">
+                    Last period start
+                    <input type="date" required value={lastPeriod} onChange={(e) => setLastPeriod(e.target.value)} className="sita-input mt-2 w-full text-base" />
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {mode === 'pregnant' && (
+              <div className="rounded-[24px] bg-[#f4f2f9] p-6 space-y-5 border border-[#e6e2f1]">
+                <h3 className="text-sm font-bold text-[#6b5887]">Pregnancy Information</h3>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <label className="block text-sm font-bold text-[#6b5887]">
+                    Estimated Due Date <span className="text-[#b55778]">*</span>
+                    <input type="date" required value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="sita-input mt-2 w-full text-base border-[#e6e2f1]" />
+                  </label>
+                  <label className="block text-sm font-bold text-[#6b5887]">
+                    Last Menstrual Period <span className="font-normal opacity-70">(optional)</span>
+                    <input type="date" value={pregnancyStartDate} onChange={(e) => setPregnancyStartDate(e.target.value)} className="sita-input mt-2 w-full text-base border-[#e6e2f1]" />
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {mode === 'postpartum' && (
+              <div className="rounded-[24px] bg-[#edf6ef] p-6 space-y-5 border border-[#d8eadc]">
+                <h3 className="text-sm font-bold text-[#5c8a66]">Postpartum Information</h3>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <label className="block text-sm font-bold text-[#5c8a66]">
+                    Childbirth Date <span className="text-[#b55778]">*</span>
+                    <input type="date" required value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="sita-input mt-2 w-full text-base border-[#d8eadc]" />
+                  </label>
+                  <label className="block text-sm font-bold text-[#5c8a66]">
+                    Current Bleeding Level
+                    <select value={bleedingLevel} onChange={(e) => setBleedingLevel(e.target.value)} className="sita-input mt-2 w-full text-base border-[#d8eadc] bg-white">
+                      <option value="none">None</option>
+                      <option value="light">Light</option>
+                      <option value="normal">Normal</option>
+                      <option value="heavy">Heavy</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Section: Additional Notes */}
+          <section className="space-y-3">
+            <label className="block text-sm font-bold text-[#765f71]">
+              Anything relevant for SITA to know? <span className="font-normal text-[#b09aa7]">(optional)</span>
+              <textarea
+                value={healthNotes}
+                onChange={(e) => setHealthNotes(e.target.value)}
+                className="sita-input mt-2 w-full min-h-[100px] text-base resize-none"
+                placeholder="e.g. Trying to conceive, PCOS awareness, irregular cycles, general health goals..."
+              />
+            </label>
+          </section>
+
+          {error && (
+            <div className="rounded-2xl bg-[#fff0f3] p-4 border border-[#fce8ef]">
+              <p className="text-sm font-semibold text-[#b55778]">{error}</p>
+            </div>
           )}
-          <label className="mt-4 block text-xs font-bold text-[#765f71]">
-            Anything relevant for SITA? <span className="font-normal text-[#b09aa7]">(optional)</span>
-            <textarea
-              value={healthNotes}
-              onChange={(e) => setHealthNotes(e.target.value)}
-              className="sita-input mt-2 min-h-20 resize-none"
-              placeholder="e.g. Trying to conceive, PCOS awareness, irregular cycles, general health goals..."
-            />
-          </label>
-          {error && <p className="mt-4 rounded-2xl bg-[#fff0f3] px-3 py-2 text-xs font-semibold text-[#b55778]">{error}</p>}
-          <button disabled={busy} className="mt-6 w-full rounded-full bg-[#e9779d] px-5 py-3.5 text-sm font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60">
-            {busy ? 'Saving your space…' : 'Continue to SITA'}
-          </button>
+
+          <div className="pt-2">
+            <button disabled={busy} className="w-full rounded-[20px] bg-[#e9779d] px-6 py-4 text-base font-bold text-white shadow-lg shadow-[#e9779d]/20 transition hover:-translate-y-0.5 hover:shadow-xl hover:bg-[#e26a93] disabled:opacity-60 disabled:hover:translate-y-0">
+              {busy ? 'Saving your health profile…' : 'Complete Setup & Enter SITA'}
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -457,7 +518,7 @@ export function HomePage() {
     profile?.typical_period_length || 5
   );
 
-  const handleAddSymptom = async (e: React.FormEvent) => {
+  const handleAddSymptom = async (e: FormEvent) => {
     e.preventDefault();
     if (!symptomName.trim()) return;
     await addSymptom(symptomName.trim(), 'general', symptomSeverity);
@@ -763,7 +824,7 @@ export function CyclePage() {
     togglePeriodDayString(dStr);
   };
 
-  const handleSavePeriodDetails = async (e: React.FormEvent) => {
+  const handleSavePeriodDetails = async (e: FormEvent) => {
     e.preventDefault();
     const dStr = getDateStr(selectedDay);
     await logPeriodDetails(dStr, {
@@ -1200,7 +1261,9 @@ export function MoodPage() {
             <Wind className="mt-6 h-6 w-6 text-[#b68caa]/60" />
           </Card>
         </div>
-      </div>
+      
+      
+    </div>
     </AppShell>
   );
 }
@@ -1366,14 +1429,51 @@ export function SitaPage() {
   const { messages, sendMessage, clearMessages, runPCOSScreening, runSymptomTriage, profile } = useSitaStore();
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [extractedData, setExtractedData] = useState<any>(null);
+  const { addMedicalRecord } = useSitaStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Read file as base64
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        setUploadingDoc(true);
+        const base64 = ev.target?.result;
+        const res = await fetch('/api/extract-medical-record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: base64 })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setExtractedData(data);
+        } else {
+          alert('Could not process document: ' + data.error);
+        }
+      } catch (err) {
+        alert('Upload failed');
+      } finally {
+        setUploadingDoc(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const [pcosOpen, setPcosOpen] = useState(false);
   const [triageOpen, setTriageOpen] = useState(false);
+  const searchString = useSearch();
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
+    const searchParams = new URLSearchParams(searchString);
     if (searchParams.get('pcos') === 'true') setPcosOpen(true);
     if (searchParams.get('triage') === 'true') setTriageOpen(true);
-  }, []);
+  }, [searchString]);
 
   // PCOS form state
   const [irregularCycles, setIrregularCycles] = useState(true);
@@ -1405,11 +1505,11 @@ export function SitaPage() {
     }
   };
 
-  const handlePCOSSubmit = async (e: React.FormEvent) => {
+  const handlePCOSSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setScreeningBusy(true);
     try {
-      const { result, explanation } = await runPCOSScreening({
+      const { result, explanation, id } = await runPCOSScreening({
         irregularCycles,
         cycleLengthDays: profile?.typical_cycle_length || 28,
         excessHairGrowth: excessHair,
@@ -1420,7 +1520,7 @@ export function SitaPage() {
         pelvicPain,
       });
       setPcosOpen(false);
-      await sendMessage(`I just completed the PCOS awareness screening. Result: ${result.riskLevel.toUpperCase()} alignment (Score: ${result.score}). Summary: ${explanation}`);
+      await sendMessage(`I just completed a PCOS awareness screening (Assessment ID: ${id}). What does my result mean?`, id);
     } catch (err: any) {
       alert(err?.message || 'Screening request failed.');
     } finally {
@@ -1428,11 +1528,11 @@ export function SitaPage() {
     }
   };
 
-  const handleTriageSubmit = async (e: React.FormEvent) => {
+  const handleTriageSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setScreeningBusy(true);
     try {
-      const { result, explanation } = await runSymptomTriage({
+      const { result, explanation, id } = await runSymptomTriage({
         symptom: triageSymptom,
         durationDays: triageDuration,
         severity: triageSeverity,
@@ -1443,7 +1543,7 @@ export function SitaPage() {
         reproductiveMode: profile?.reproductive_mode || 'not-pregnant',
       });
       setTriageOpen(false);
-      await sendMessage(`I conducted a symptom triage for "${triageSymptom}". Category: ${result.category}. Recommendation: ${explanation}`);
+      await sendMessage(`I conducted a symptom triage for "${triageSymptom}" (Assessment ID: ${id}). What does my result mean?`, id);
     } catch (err: any) {
       alert(err?.message || 'Triage assessment failed.');
     } finally {
@@ -1556,6 +1656,16 @@ export function SitaPage() {
 
           {/* Input Box matching reference design */}
           <div className="flex items-center gap-2 rounded-[1.2rem] border border-white/80 bg-white/70 p-2 pl-5 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] backdrop-blur-md transition-all focus-within:border-white focus-within:bg-white/90 focus-within:ring-4 focus-within:ring-[#f9ebf1]/60">
+            
+            <input type="file" accept="image/*,.pdf" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending || uploadingDoc}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-[#b19db2] transition hover:bg-white hover:text-[#5d4662]"
+              title="Add Medical Record"
+            >
+              {uploadingDoc ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#b19db2] border-t-[#5d4662]" /> : <FilePlus className="h-4 w-4" />}
+            </button>
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -1683,6 +1793,108 @@ export function SitaPage() {
           </button>
         </form>
       </Modal>
+    
+      {/* Medical Record Review Modal */}
+      <Modal isOpen={!!extractedData} onClose={() => setExtractedData(null)} title="Review Medical Record">
+        {extractedData && (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                await addMedicalRecord({
+                  title: extractedData.structured_data.title || 'Untitled Record',
+                  document_type: extractedData.structured_data.document_type || 'Unknown',
+                  document_date: extractedData.structured_data.document_date || new Date().toISOString().split('T')[0],
+                  extracted_text: extractedData.extracted_text,
+                  structured_data: extractedData.structured_data
+                });
+                setExtractedData(null);
+                // Optionally auto-send a message
+                sendMessage("I just uploaded a new medical record: " + extractedData.structured_data.title);
+              } catch (err) {
+                alert('Failed to save record.');
+              }
+            }}
+            className="space-y-4"
+          >
+            <p className="text-xs text-[#8c7487]">
+              Please review the extracted information before saving. You can edit any incorrect details.
+            </p>
+            
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-[#765f71]">Title</label>
+              <input 
+                className="mt-1 w-full rounded-xl border border-[#f0e2e8] bg-[#fcf9fb] p-3 text-sm text-[#4d394e]"
+                value={extractedData.structured_data.title || ''}
+                onChange={e => setExtractedData({...extractedData, structured_data: {...extractedData.structured_data, title: e.target.value}})}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-widest text-[#765f71]">Type</label>
+                <input 
+                  className="mt-1 w-full rounded-xl border border-[#f0e2e8] bg-[#fcf9fb] p-3 text-sm text-[#4d394e]"
+                  value={extractedData.structured_data.document_type || ''}
+                  onChange={e => setExtractedData({...extractedData, structured_data: {...extractedData.structured_data, document_type: e.target.value}})}
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-widest text-[#765f71]">Date</label>
+                <input 
+                  type="date"
+                  className="mt-1 w-full rounded-xl border border-[#f0e2e8] bg-[#fcf9fb] p-3 text-sm text-[#4d394e]"
+                  value={extractedData.structured_data.document_date || ''}
+                  onChange={e => setExtractedData({...extractedData, structured_data: {...extractedData.structured_data, document_date: e.target.value}})}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-[#765f71]">Doctor/Provider</label>
+              <input 
+                className="mt-1 w-full rounded-xl border border-[#f0e2e8] bg-[#fcf9fb] p-3 text-sm text-[#4d394e]"
+                value={extractedData.structured_data.doctor_name || ''}
+                onChange={e => setExtractedData({...extractedData, structured_data: {...extractedData.structured_data, doctor_name: e.target.value}})}
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-[#765f71]">Medicines</label>
+              <textarea 
+                className="mt-1 w-full rounded-xl border border-[#f0e2e8] bg-[#fcf9fb] p-3 text-sm text-[#4d394e] min-h-[60px]"
+                value={(extractedData.structured_data.medicines || []).join(', ')}
+                onChange={e => setExtractedData({...extractedData, structured_data: {...extractedData.structured_data, medicines: e.target.value.split(',').map((s) => s.trim())}})}
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-widest text-[#765f71]">Notes / Other findings</label>
+              <textarea 
+                className="mt-1 w-full rounded-xl border border-[#f0e2e8] bg-[#fcf9fb] p-3 text-sm text-[#4d394e] min-h-[80px]"
+                value={extractedData.structured_data.notes || ''}
+                onChange={e => setExtractedData({...extractedData, structured_data: {...extractedData.structured_data, notes: e.target.value}})}
+              />
+            </div>
+
+            <div className="flex gap-3 pt-3">
+              <button
+                type="button"
+                onClick={() => setExtractedData(null)}
+                className="flex-1 rounded-full border border-[#f0e2e8] bg-white py-3 text-sm font-semibold text-[#8c7487] hover:bg-[#faf7f9]"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 rounded-full bg-[#5d4662] py-3 text-sm font-semibold text-white shadow-md hover:bg-[#4a364e]"
+              >
+                Confirm & Save
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </AppShell>
   );
 }
@@ -1700,7 +1912,7 @@ export function PregnancyPage() {
 
   const stats = calculatePregnancyStats(pregnancyData.due_date, pregnancyData.pregnancy_start_date);
 
-  const handleAddAppointment = async (e: React.FormEvent) => {
+  const handleAddAppointment = async (e: FormEvent) => {
     e.preventDefault();
     if (!appointmentTitle.trim()) return;
     await addAppointment({
@@ -2130,7 +2342,7 @@ export function ProfilePage() {
 
   const displayName = profile?.display_name || '';
 
-  const handleSaveProfileName = async (e: React.FormEvent) => {
+  const handleSaveProfileName = async (e: FormEvent) => {
     e.preventDefault();
     await updateProfile({ display_name: name.trim() });
     setEditProfileOpen(false);
@@ -2138,7 +2350,7 @@ export function ProfilePage() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const handleSaveCycleSettings = async (e: React.FormEvent) => {
+  const handleSaveCycleSettings = async (e: FormEvent) => {
     e.preventDefault();
     await updateProfile({
       typical_cycle_length: Number(cycleLength),

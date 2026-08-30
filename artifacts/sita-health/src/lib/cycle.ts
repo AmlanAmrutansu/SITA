@@ -181,8 +181,8 @@ export function calculatePregnancyStats(dueDateStr?: string | null, lmpDateStr?:
     const msSinceLmp = today.getTime() - lmp.getTime();
     totalDays = Math.max(0, Math.min(280, Math.round(msSinceLmp / (1000 * 60 * 60 * 24))));
   } else {
-    // Default 20 weeks 3 days if unrecorded
-    totalDays = 20 * 7 + 3;
+    // Default to 0
+totalDays = 0;
   }
 
   const weeks = Math.floor(totalDays / 7);
@@ -221,7 +221,7 @@ export function calculatePregnancyStats(dueDateStr?: string | null, lmpDateStr?:
 // Postpartum calculation
 export function calculatePostpartumStats(birthDateStr?: string | null) {
   const today = new Date();
-  let totalDays = 42; // default 6 weeks if unrecorded
+  let totalDays = 0; // default 0 if unrecorded
 
   if (birthDateStr) {
     const birth = parseDate(birthDateStr);

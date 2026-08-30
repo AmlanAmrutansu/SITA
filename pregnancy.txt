@@ -1,0 +1,226 @@
+export function PregnancyPage() {
+  const { pregnancyData, recordKick, resetKicks, addAppointment } = useSitaStore();
+  const [, setLocation] = useLocation();
+  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [appointmentTitle, setAppointmentTitle] = useState('');
+  const [appointmentDate, setAppointmentDate] = useState('');
+  const [appointmentDoctor, setAppointmentDoctor] = useState('Dr. Anita Rao');
+
+  const stats = calculatePregnancyStats(pregnancyData.due_date, pregnancyData.pregnancy_start_date);
+
+  const handleAddAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!appointmentTitle.trim()) return;
+    await addAppointment({
+      title: appointmentTitle.trim(),
+      date: appointmentDate,
+      doctor: appointmentDoctor.trim(),
+    });
+    setAppointmentTitle('');
+    setActiveModal(null);
+  };
+
+  return (
+    <AppShell>
+      <PageTitle eyebrow="A new chapter, gently held" title="Pregnancy Overview">
+        <span className="rounded-full bg-[#f1ebfa] px-3.5 py-2 text-xs font-bold text-[#8973aa] shadow-xs">
+          {stats.trimester}
+        </span>
+      </PageTitle>
+
+      <div className="grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
+        <div className="space-y-5">
+          {/* Baby Size Card matching reference image */}
+          <Card className="overflow-hidden border border-white/60 bg-gradient-to-br from-[#f2ecfa]/90 to-[#f9f5fd]/90 p-0 shadow-[0_8px_32px_rgba(213,101,138,0.06)] backdrop-blur-xl" testid="card-pregnancy-hero">
+            <WellnessIllustration type="pregnancy" />
+            <div className="relative p-6">
+              <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#917aa9]">
+                Week {stats.weeks} • Day {stats.days} 🌸
+              </p>
+              <p className="mt-2 font-display text-[2.2rem] leading-tight text-[#594365]">
+                Baby is the size of a {stats.babySizeItem} {stats.babySizeEmoji}
+              </p>
+              <p className="mt-2 text-[13px] leading-relaxed text-[#82718d]">
+                Approx. {stats.babyLength} long and {stats.babyWeight}. Your body is working hard. Give it room for rest, hydration, and small moments of joy.
+              </p>
+            </div>
+          </Card>
+
+          {/* Tip Card */}
+          <Card className="border border-white/60 bg-gradient-to-br from-[#eaf3eb]/90 to-[#f2f9f3]/90 shadow-sm backdrop-blur-md" testid="card-pregnancy-tip">
+            <div className="flex gap-4">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/60 text-[#769b7d] shadow-sm">
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#73967a]">Today’s Tip</p>
+                <p className="mt-1.5 text-sm font-semibold leading-relaxed text-[#4f6d55]">
+                  Stay hydrated and take short walks. Your body will thank you! 💖
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Right: Care Toolkit matching 6 tiles in image */}
+        <Card className="border border-white/60 bg-white/40 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-xl" testid="card-pregnancy-tools">
+          <h2 className="font-display text-[1.4rem] text-[#594354]">Your Care Toolkit</h2>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            {[
+              ['Timeline', CalendarDays, () => setActiveModal('Timeline')],
+              ['Symptoms', Thermometer, () => setActiveModal('Symptoms')],
+              ['Nutrition', Utensils, () => setActiveModal('Nutrition')],
+              ['Kick Counter', Activity, () => setActiveModal('Kick Counter')],
+              ['Appointments', NotebookPen, () => setActiveModal('Appointments')],
+              ['AI Assistant', Sparkles, () => setLocation('/sita')],
+            ].map(([label, Icon, action]: any) => (
+              <button
+                key={label}
+                onClick={action}
+                className="flex min-h-[92px] flex-col items-center justify-center gap-2 rounded-[1.2rem] bg-white/60 p-3 text-[#816a98] shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/80"
+                data-testid={`button-pregnancy-${label.toLowerCase().replace(' ', '-')}`}
+              >
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f0e9f7] shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)]">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="text-[10px] font-bold">{label}</span>
+              </button>
+            ))}
+          </div>
+
+          <p className="mt-6 rounded-2xl bg-[#fff5eb] p-4 text-[11px] leading-relaxed text-[#946f5e] shadow-sm">
+            Every pregnancy is different. Please contact your healthcare professional with any symptoms or changes that feel unusual.
+          </p>
+        </Card>
+      </div>
+
+      {/* Kick Counter Modal */}
+      <Modal isOpen={activeModal === 'Kick Counter'} onClose={() => setActiveModal(null)} title="Kick Counter">
+        <div className="text-center space-y-4">
+          <p className="text-xs text-[#806f8c]">
+            Doctors generally recommend feeling at least 10 fetal movements within 2 hours during peak activity.
+          </p>
+          <div className="py-6">
+            <p className="font-display text-6xl text-[#674b80]">{pregnancyData.kick_count || 0}</p>
+            <p className="mt-1 text-xs text-[#9d88b0]">Kicks recorded today</p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={recordKick}
+              className="flex-1 rounded-full bg-[#8f75b4] py-3.5 text-xs font-bold text-white transition hover:-translate-y-0.5"
+            >
+              + Record Kick
+            </button>
+            <button
+              onClick={resetKicks}
+              className="rounded-full border border-[#eedde7] px-4 py-3.5 text-xs font-bold text-[#897384] hover:bg-[#fff0f4]"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Appointments Modal */}
+      <Modal isOpen={activeModal === 'Appointments'} onClose={() => setActiveModal(null)} title="Prenatal Appointments">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            {(pregnancyData.appointments || []).map((app) => (
+              <div key={app.id} className="rounded-2xl border border-[#f0e2e8] bg-white p-3.5">
+                <div className="flex justify-between">
+                  <p className="text-xs font-bold text-[#5c445a]">{app.title}</p>
+                  <span className="text-[10px] text-[#8e738c] font-semibold">{app.date}</span>
+                </div>
+                {app.doctor && <p className="mt-1 text-[10px] text-[#9c8496]">{app.doctor}</p>}
+              </div>
+            ))}
+          </div>
+          <form onSubmit={handleAddAppointment} className="border-t border-[#f1e6ec] pt-4 space-y-3">
+            <p className="text-xs font-bold text-[#62475e]">Add an appointment</p>
+            <input
+              type="text"
+              required
+              value={appointmentTitle}
+              onChange={(e) => setAppointmentTitle(e.target.value)}
+              placeholder="e.g. 24-Week Glucose Check"
+              className="sita-input"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="date"
+                required
+                value={appointmentDate}
+                onChange={(e) => setAppointmentDate(e.target.value)}
+                className="sita-input"
+              />
+              <input
+                type="text"
+                value={appointmentDoctor}
+                onChange={(e) => setAppointmentDoctor(e.target.value)}
+                placeholder="Doctor / Clinic"
+                className="sita-input"
+              />
+            </div>
+            <button type="submit" className="w-full rounded-full bg-[#8f75b4] py-3 text-xs font-bold text-white">
+              Add Appointment
+            </button>
+          </form>
+        </div>
+      </Modal>
+
+      {/* Nutrition Modal */}
+      <Modal isOpen={activeModal === 'Nutrition'} onClose={() => setActiveModal(null)} title="Pregnancy Nutrition Guide">
+        <div className="space-y-3 text-xs leading-relaxed text-[#6d576a]">
+          <div className="rounded-2xl bg-[#edf7ee] p-3.5">
+            <strong className="block text-[#476e4c]">Hydration &amp; Electrolytes</strong>
+            Drink 8–10 glasses of water daily. Coconut water or lemon water helps maintain fluid balance.
+          </div>
+          <div className="rounded-2xl bg-[#fff2f5] p-3.5">
+            <strong className="block text-[#a84e6f]">Iron &amp; Folate Rich Foods</strong>
+            Lentils, leafy greens, fortified cereals, and lean proteins support expanding blood volume.
+          </div>
+          <div className="rounded-2xl bg-[#f4effa] p-3.5">
+            <strong className="block text-[#7b5ea1]">Calcium &amp; Vitamin D</strong>
+            Yogurt, pasteurized cheese, sesame seeds, and fortified plant milks help baby’s developing bone structure.
+          </div>
+        </div>
+      </Modal>
+
+      {/* Symptoms Modal */}
+      <Modal isOpen={activeModal === 'Symptoms'} onClose={() => setActiveModal(null)} title="Pregnancy Symptoms">
+        <div className="space-y-3">
+          <p className="text-xs text-[#8c7488]">Common symptoms in the second trimester:</p>
+          <div className="flex flex-wrap gap-2">
+            {['Mild backache', 'Food cravings', 'Round ligament aches', 'Vivid dreams', 'Occasional heartburn', 'Nasal congestion'].map((s) => (
+              <span key={s} className="rounded-full bg-[#f4effa] px-3.5 py-1.5 text-xs font-semibold text-[#745596]">
+                {s}
+              </span>
+            ))}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Timeline Modal */}
+      <Modal isOpen={activeModal === 'Timeline'} onClose={() => setActiveModal(null)} title="Pregnancy Timeline">
+        <div className="space-y-3 text-xs text-[#6e586b]">
+          <div className="border-l-2 border-[#8f75b4] pl-3">
+            <strong>Weeks 1–13: 1st Trimester</strong>
+            <p className="text-[11px] text-[#9b8599]">Embryonic development, major organs form, initial ultrasound.</p>
+          </div>
+          <div className="border-l-2 border-[#e9779d] pl-3 font-semibold text-[#8f476a]">
+            <strong>Weeks 14–27: 2nd Trimester (Current)</strong>
+            <p className="text-[11px] text-[#9b8599]">Quickening movements, anatomy scan, increased energy.</p>
+          </div>
+          <div className="border-l-2 border-[#d5cadf] pl-3">
+            <strong>Weeks 28–40: 3rd Trimester</strong>
+            <p className="text-[11px] text-[#9b8599]">Rapid growth, birth plan preparation, final checkups.</p>
+          </div>
+        </div>
+      </Modal>
+    </AppShell>
+  );
+}
+
+// ==========================================
+// 9. POSTPARTUM MODE
+// ==========================================

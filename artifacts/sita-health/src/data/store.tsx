@@ -45,6 +45,23 @@ export interface PostpartumData {
   notes?: string;
 }
 
+
+export interface MedicalRecord {
+  id?: string;
+  title: string;
+  document_type: string;
+  document_date?: string;
+  extracted_text?: string;
+  structured_data: {
+    doctor_name?: string;
+    medicines?: string[];
+    diagnoses?: string[];
+    tests?: string[];
+    notes?: string;
+  };
+  created_at?: string;
+}
+
 interface SitaStore {
   profile: Profile | null;
   mode: ReproductiveMode;
@@ -65,14 +82,19 @@ interface SitaStore {
   recordKick: () => Promise<void>;
   resetKicks: () => Promise<void>;
   addAppointment: (app: { title: string; date: string; doctor?: string; notes?: string }) => Promise<void>;
+
+  medicalRecords: MedicalRecord[];
+  addMedicalRecord: (record: Omit<MedicalRecord, 'id'>) => Promise<void>;
+  deleteMedicalRecord: (id: string) => Promise<void>;
+
   postpartumData: PostpartumData;
   updatePostpartumData: (patch: Partial<PostpartumData>) => Promise<void>;
   recordKegel: () => Promise<void>;
   messages: ChatMessage[];
-  sendMessage: (text: string) => Promise<void>;
+  sendMessage: (text: string, assessmentId?: string) => Promise<void>;
   clearMessages: () => Promise<void>;
-  runPCOSScreening: (input: PCOSScreeningInput) => Promise<{ result: PCOSScreeningResult; explanation: string }>;
-  runSymptomTriage: (input: SymptomTriageInput) => Promise<{ result: SymptomTriageResult; explanation: string }>;
+  runPCOSScreening: (input: PCOSScreeningInput) => Promise<{ result: PCOSScreeningResult; explanation: string; id?: string }>;
+  runSymptomTriage: (input: SymptomTriageInput) => Promise<{ result: SymptomTriageResult; explanation: string; id?: string }>;
   privacy: boolean;
   setPrivacy: (value: boolean) => void;
   notifications: boolean;
@@ -123,7 +145,10 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
   const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
   const [symptomLogs, setSymptomLogs] = useState<SymptomLogItem[]>([]);
   const [pregnancyData, setPregnancyData] = useState<PregnancyData>(defaultPregnancyData);
+
   const [postpartumData, setPostpartumData] = useState<PostpartumData>(defaultPostpartumData);
+  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
+
   const [messages, setMessages] = useState<ChatMessage[]>(welcomeChat);
   const [privacy, setPrivacyState] = useState(true);
   const [notifications, setNotificationsState] = useState(true);
@@ -151,14 +176,16 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
         pregData,
         postData,
         chatData,
+        recordsData,
       ] = await Promise.all([
         api.profile().catch(() => null),
         api.list<any>('moods', 'logged_at.desc', 50).catch(() => []),
         api.list<any>('cycle_logs', 'period_date.desc', 100).catch(() => []),
         api.list<any>('symptom_logs', 'logged_at.desc', 50).catch(() => []),
-        api.list<any>('pregnancy_data').catch(() => []),
-        api.list<any>('postpartum_data').catch(() => []),
+        api.list<any>('pregnancy_data', 'id.desc', 1).catch(() => []),
+        api.list<any>('postpartum_data', 'id.desc', 1).catch(() => []),
         api.list<any>('chat_messages', 'created_at.asc', 50).catch(() => []),
+        api.list<any>('medical_records', 'document_date.desc', 50).catch(() => []),
       ]);
 
       if (profileData) {
@@ -276,11 +303,42 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
   }, [refreshAll]);
 
 
+
+  const addMedicalRecord = async (record: Omit<MedicalRecord, 'id'>) => {
+    try {
+      const data = await api.insert('medical_records', record);
+      if (data && data.length > 0) {
+        setMedicalRecords((prev) => [data[0], ...prev]);
+      }
+    } catch (e) {
+      console.error('Failed to add medical record', e);
+      throw e;
+    }
+  };
+
+  const deleteMedicalRecord = async (id: string) => {
+    try {
+      await api.remove('medical_records', id);
+      setMedicalRecords((prev) => prev.filter((r) => r.id !== id));
+    } catch (e) {
+      console.error('Failed to delete medical record', e);
+      throw e;
+    }
+  };
+
   const updateProfile = async (patch: Partial<Profile>) => {
-    setProfile((prev) => (prev ? { ...prev, ...patch } : (patch as Profile)));
+    const prev = profile;
+    setProfile((p) => (p ? { ...p, ...patch } : (patch as Profile)));
     if (patch.reproductive_mode) setModeState(patch.reproductive_mode);
     if (signedIn) {
-      await api.updateProfile(patch).catch(console.error);
+      try {
+        await api.updateProfile(patch);
+      } catch (err: any) {
+        setProfile(prev);
+        if (prev?.reproductive_mode) setModeState(prev.reproductive_mode);
+        toast({ title: 'Error', description: 'Failed to update profile.', variant: 'destructive' });
+        throw err;
+      }
     }
   };
 
@@ -301,16 +359,25 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
 
   const togglePeriodDayString = async (dateStr: string, details?: Partial<CycleLogItem>) => {
     const exists = periodDateStrings.includes(dateStr);
+    const prevDates = periodDateStrings;
+    const prevLogs = cycleLogs;
+
     const updatedDates = exists
       ? periodDateStrings.filter((d) => d !== dateStr)
       : [...periodDateStrings, dateStr].sort();
-
     setPeriodDateStrings(updatedDates);
 
     if (exists) {
       setCycleLogs((prev) => prev.filter((c) => c.period_date !== dateStr));
       if (signedIn) {
-        await api.removeByDate('cycle_logs', dateStr).catch(console.error);
+        try {
+          await api.removeByDate('cycle_logs', dateStr);
+        } catch (err) {
+          setPeriodDateStrings(prevDates);
+          setCycleLogs(prevLogs);
+          toast({ title: 'Error', description: 'Failed to delete period log.', variant: 'destructive' });
+          throw err;
+        }
       }
     } else {
       const newEntry: CycleLogItem = {
@@ -322,47 +389,71 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
       };
       setCycleLogs((prev) => [newEntry, ...prev]);
       if (signedIn) {
-        await api.insert('cycle_logs', newEntry as any).catch(console.error);
+        try {
+          await api.insert('cycle_logs', newEntry as any);
+        } catch (err) {
+          setPeriodDateStrings(prevDates);
+          setCycleLogs(prevLogs);
+          toast({ title: 'Error', description: 'Failed to save period log.', variant: 'destructive' });
+          throw err;
+        }
       }
     }
   };
 
   const logPeriodDetails = async (dateStr: string, details: Partial<CycleLogItem>) => {
-    if (!periodDateStrings.includes(dateStr)) {
-      setPeriodDateStrings((prev) => [...prev, dateStr].sort());
+    if (signedIn) {
+      try {
+        await api.insert('cycle_logs', { period_date: dateStr, ...details } as any);
+      } catch (err: any) {
+        toast({ title: 'Error', description: 'Failed to update period details.', variant: 'destructive' });
+        throw err;
+      }
     }
     setCycleLogs((prev) => {
       const idx = prev.findIndex((c) => c.period_date === dateStr);
-      const entry: CycleLogItem = {
-        period_date: dateStr,
-        flow: details.flow || 'medium',
-        cramps: details.cramps ?? 3,
-        symptoms: details.symptoms || [],
-        notes: details.notes || '',
-      };
       if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = { ...next[idx], ...entry };
-        return next;
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], ...details };
+        return copy;
       }
-      return [entry, ...prev];
+      return [{ period_date: dateStr, flow: 'medium', cramps: 3, symptoms: [], notes: '', ...details } as CycleLogItem, ...prev];
     });
-
-    if (signedIn) {
-      await api.insert('cycle_logs', { period_date: dateStr, ...details } as any).catch(console.error);
+    if (!periodDateStrings.includes(dateStr)) {
+      setPeriodDateStrings((prev) => [...prev, dateStr].sort());
     }
   };
 
   const deletePeriodLog = async (dateStr: string) => {
+    if (signedIn) {
+      try {
+        await api.removeByDate('cycle_logs', dateStr);
+      } catch (err: any) {
+        toast({ title: 'Error', description: 'Failed to delete period log.', variant: 'destructive' });
+        throw err;
+      }
+    }
     setPeriodDateStrings((prev) => prev.filter((d) => d !== dateStr));
     setCycleLogs((prev) => prev.filter((c) => c.period_date !== dateStr));
-    if (signedIn) {
-      await api.removeByDate('cycle_logs', dateStr).catch(console.error);
-    }
   };
 
   const addMood = async (entry: Omit<MoodEntry, 'id' | 'date'> & { logged_at?: string }) => {
     const todayStr = entry.logged_at || new Date().toISOString().slice(0, 10);
+    if (signedIn) {
+      try {
+        await api.insert('moods', {
+          mood: entry.mood,
+          stress: entry.stress,
+          energy: entry.energy,
+          sleep: entry.sleep || '7h 20m',
+          note: entry.note,
+          logged_at: todayStr,
+        });
+      } catch (err: any) {
+        toast({ title: 'Error', description: 'Failed to save mood.', variant: 'destructive' });
+        throw err;
+      }
+    }
     const newMood: MoodEntry = {
       id: `m-${Date.now()}`,
       date: todayStr,
@@ -373,27 +464,36 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
       note: entry.note,
     };
     setMoodEntries((prev) => [newMood, ...prev]);
-    if (signedIn) {
-      await api.insert('moods', {
-        mood: entry.mood,
-        stress: entry.stress,
-        energy: entry.energy,
-        sleep: entry.sleep || '7h 20m',
-        note: entry.note,
-        logged_at: todayStr,
-      }).catch(console.error);
-    }
   };
 
   const deleteMood = async (id: string) => {
-    setMoodEntries((prev) => prev.filter((m) => m.id !== id));
     if (signedIn && !id.startsWith('m-')) {
-      await api.remove('moods', id).catch(console.error);
+      try {
+        await api.remove('moods', id);
+      } catch (err: any) {
+        toast({ title: 'Error', description: 'Failed to delete mood.', variant: 'destructive' });
+        throw err;
+      }
     }
+    setMoodEntries((prev) => prev.filter((m) => m.id !== id));
   };
 
   const addSymptom = async (symptom: string, category = 'general', severity: 'mild' | 'moderate' | 'severe' = 'mild', notes?: string) => {
     const todayStr = new Date().toISOString().slice(0, 10);
+    if (signedIn) {
+      try {
+        await api.insert('symptom_logs', {
+          symptom,
+          category,
+          severity,
+          notes,
+          logged_at: todayStr,
+        });
+      } catch (err: any) {
+        toast({ title: 'Error', description: 'Failed to save symptom.', variant: 'destructive' });
+        throw err;
+      }
+    }
     const newSym: SymptomLogItem = {
       id: `sym-${Date.now()}`,
       symptom,
@@ -403,73 +503,128 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
       notes,
     };
     setSymptomLogs((prev) => [newSym, ...prev]);
-    if (signedIn) {
-      await api.insert('symptom_logs', {
-        symptom,
-        category,
-        severity,
-        notes,
-        logged_at: todayStr,
-      }).catch(console.error);
-    }
   };
 
   const updatePregnancyData = async (patch: Partial<PregnancyData>) => {
-    setPregnancyData((prev) => ({ ...prev, ...patch }));
     if (signedIn) {
-      await api.insert('pregnancy_data', patch as any).catch(console.error);
+      try {
+        if (pregnancyData?.id) {
+          await api.update('pregnancy_data', pregnancyData.id, patch);
+        } else {
+          const res = await api.insert<any>('pregnancy_data', patch as any);
+          if (res && res[0]?.id) patch.id = res[0].id;
+        }
+      } catch (err: any) {
+        toast({ title: 'Error', description: 'Failed to update pregnancy data.', variant: 'destructive' });
+        throw err;
+      }
     }
+    setPregnancyData((prev) => ({ ...prev, ...patch }));
   };
 
   const recordKick = async () => {
     const current = (pregnancyData.kick_count || 0) + 1;
     const now = new Date().toISOString();
-    setPregnancyData((prev) => ({ ...prev, kick_count: current, last_kick_time: now }));
+    let newId = undefined;
     if (signedIn) {
-      await api.insert('pregnancy_data', { kick_count: current, last_kick_time: now } as any).catch(console.error);
+      try {
+        if (pregnancyData?.id) {
+          await api.update('pregnancy_data', pregnancyData.id, { kick_count: current, last_kick_time: now });
+        } else {
+          const res = await api.insert<any>('pregnancy_data', { kick_count: current, last_kick_time: now } as any);
+          if (res && res[0]?.id) newId = res[0].id;
+        }
+      } catch (err: any) {
+        toast({ title: 'Error', description: 'Failed to record kick.', variant: 'destructive' });
+        throw err;
+      }
     }
+    setPregnancyData((prev) => ({ ...prev, kick_count: current, last_kick_time: now, ...(newId && { id: newId }) }));
   };
 
   const resetKicks = async () => {
-    setPregnancyData((prev) => ({ ...prev, kick_count: 0 }));
+    let newId = undefined;
     if (signedIn) {
-      await api.insert('pregnancy_data', { kick_count: 0 } as any).catch(console.error);
+      try {
+        if (pregnancyData?.id) {
+          await api.update('pregnancy_data', pregnancyData.id, { kick_count: 0 });
+        } else {
+          const res = await api.insert<any>('pregnancy_data', { kick_count: 0 } as any);
+          if (res && res[0]?.id) newId = res[0].id;
+        }
+      } catch (err: any) {
+        toast({ title: 'Error', description: 'Failed to reset kicks.', variant: 'destructive' });
+        throw err;
+      }
     }
+    setPregnancyData((prev) => ({ ...prev, kick_count: 0, ...(newId && { id: newId }) }));
   };
 
   const addAppointment = async (app: { title: string; date: string; doctor?: string; notes?: string }) => {
     const newApp = { id: `app-${Date.now()}`, ...app };
     const current = pregnancyData.appointments || [];
     const updated = [...current, newApp];
-    setPregnancyData((prev) => ({ ...prev, appointments: updated }));
+    let newId = undefined;
     if (signedIn) {
-      await api.insert('pregnancy_data', { appointments: updated } as any).catch(console.error);
+      try {
+        if (pregnancyData?.id) {
+          await api.update('pregnancy_data', pregnancyData.id, { appointments: updated });
+        } else {
+          const res = await api.insert<any>('pregnancy_data', { appointments: updated } as any);
+          if (res && res[0]?.id) newId = res[0].id;
+        }
+      } catch (err: any) {
+        toast({ title: 'Error', description: 'Failed to add appointment.', variant: 'destructive' });
+        throw err;
+      }
     }
+    setPregnancyData((prev) => ({ ...prev, appointments: updated, ...(newId && { id: newId }) }));
   };
 
   const updatePostpartumData = async (patch: Partial<PostpartumData>) => {
-    setPostpartumData((prev) => ({ ...prev, ...patch }));
     if (signedIn) {
-      await api.insert('postpartum_data', patch as any).catch(console.error);
+      try {
+        if (postpartumData?.id) {
+          await api.update('postpartum_data', postpartumData.id, patch);
+        } else {
+          const res = await api.insert<any>('postpartum_data', patch as any);
+          if (res && res[0]?.id) patch.id = res[0].id;
+        }
+      } catch (err: any) {
+        toast({ title: 'Error', description: 'Failed to update postpartum data.', variant: 'destructive' });
+        throw err;
+      }
     }
+    setPostpartumData((prev) => ({ ...prev, ...patch }));
   };
 
   const recordKegel = async () => {
     const count = (postpartumData.kegel_count || 0) + 5;
-    setPostpartumData((prev) => ({ ...prev, kegel_count: count }));
+    let newId = undefined;
     if (signedIn) {
-      await api.insert('postpartum_data', { kegel_count: count } as any).catch(console.error);
+      try {
+        if (postpartumData?.id) {
+          await api.update('postpartum_data', postpartumData.id, { kegel_count: count });
+        } else {
+          const res = await api.insert<any>('postpartum_data', { kegel_count: count } as any);
+          if (res && res[0]?.id) newId = res[0].id;
+        }
+      } catch (err: any) {
+        toast({ title: 'Error', description: 'Failed to record Kegels.', variant: 'destructive' });
+        throw err;
+      }
     }
+    setPostpartumData((prev) => ({ ...prev, kegel_count: count, ...(newId && { id: newId }) }));
   };
 
-  const sendMessage = async (text: string) => {
+  const sendMessage = async (text: string, assessmentId?: string) => {
     const now = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     const userMsgId = `u-${Date.now()}`;
     setMessages((prev) => [...prev, { id: userMsgId, role: 'user', text, time: now }]);
 
     if (signedIn) {
       try {
-        const { reply } = await api.chat(text);
+        const { reply } = await api.chat(text, assessmentId);
         setMessages((prev) => [...prev, { id: `s-${Date.now()}`, role: 'sita', text: reply, time: now }]);
       } catch (err: any) {
         setMessages((prev) => [
@@ -490,7 +645,7 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
           {
             id: `s-${Date.now()}`,
             role: 'sita',
-            text: `Thank you for asking, ${profile?.display_name || 'friend'} 🌸. I am here to walk beside you. Remember that symptoms like cramps, fatigue, and mood shifts are signals from your body. To enable full AI intelligence with Gemini, please sign in or set up your account.`,
+            text: `Thank you for asking, ${profile?.display_name || 'friend'} 🌸. I am here to walk beside you. Remember that symptoms like cramps, fatigue, and mood shifts are signals from your body. To enable full AI intelligence with SITA, please sign in or set up your account.`,
             time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
           },
         ]);
@@ -499,10 +654,15 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
   };
 
   const clearMessages = async () => {
-    setMessages([]);
     if (signedIn) {
-      await api.clearChatHistory().catch(console.error);
+      try {
+        await api.clearChatHistory();
+      } catch (err: any) {
+        toast({ title: 'Error', description: 'Failed to clear chat history.', variant: 'destructive' });
+        throw err;
+      }
     }
+    setMessages([]);
   };
 
   const runPCOSScreening = async (input: PCOSScreeningInput) => {
@@ -580,6 +740,9 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
       loading,
       signOut,
       exportData,
+      medicalRecords,
+      addMedicalRecord,
+      deleteMedicalRecord,
       purgeAccountData,
       refreshAll,
     }),

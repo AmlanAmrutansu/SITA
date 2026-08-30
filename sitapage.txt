@@ -1,0 +1,328 @@
+export function SitaPage() {
+  const { messages, sendMessage, clearMessages, runPCOSScreening, runSymptomTriage, profile } = useSitaStore();
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [pcosOpen, setPcosOpen] = useState(false);
+  const [triageOpen, setTriageOpen] = useState(false);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('pcos') === 'true') setPcosOpen(true);
+    if (searchParams.get('triage') === 'true') setTriageOpen(true);
+  }, []);
+
+  // PCOS form state
+  const [irregularCycles, setIrregularCycles] = useState(true);
+  const [excessHair, setExcessHair] = useState(false);
+  const [acne, setAcne] = useState(true);
+  const [hairThinning, setHairThinning] = useState(false);
+  const [weightChallenge, setWeightChallenge] = useState(false);
+  const [familyHist, setFamilyHist] = useState(false);
+  const [pelvicPain, setPelvicPain] = useState(true);
+  const [screeningBusy, setScreeningBusy] = useState(false);
+
+  // Triage form state
+  const [triageSymptom, setTriageSymptom] = useState('Pelvic cramps');
+  const [triageDuration, setTriageDuration] = useState(2);
+  const [triageSeverity, setTriageSeverity] = useState<'mild' | 'moderate' | 'severe'>('moderate');
+  const [triageFever, setTriageFever] = useState(false);
+  const [triageBleeding, setTriageBleeding] = useState(false);
+  const [triagePain, setTriagePain] = useState(false);
+
+  const send = async (value = text) => {
+    if (!value.trim() || sending) return;
+    const msg = value.trim();
+    setText('');
+    setSending(true);
+    try {
+      await sendMessage(msg);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handlePCOSSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setScreeningBusy(true);
+    try {
+      const { result, explanation } = await runPCOSScreening({
+        irregularCycles,
+        cycleLengthDays: profile?.typical_cycle_length || 28,
+        excessHairGrowth: excessHair,
+        persistentAcne: acne,
+        hairThinning,
+        weightChallenges: weightChallenge,
+        familyHistory: familyHist,
+        pelvicPain,
+      });
+      setPcosOpen(false);
+      await sendMessage(`I just completed the PCOS awareness screening. Result: ${result.riskLevel.toUpperCase()} alignment (Score: ${result.score}). Summary: ${explanation}`);
+    } catch (err: any) {
+      alert(err?.message || 'Screening request failed.');
+    } finally {
+      setScreeningBusy(false);
+    }
+  };
+
+  const handleTriageSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setScreeningBusy(true);
+    try {
+      const { result, explanation } = await runSymptomTriage({
+        symptom: triageSymptom,
+        durationDays: triageDuration,
+        severity: triageSeverity,
+        hasFever: triageFever,
+        heavyBleeding: triageBleeding,
+        severePain: triagePain,
+        dizzinessOrFainting: false,
+        reproductiveMode: profile?.reproductive_mode || 'not-pregnant',
+      });
+      setTriageOpen(false);
+      await sendMessage(`I conducted a symptom triage for "${triageSymptom}". Category: ${result.category}. Recommendation: ${explanation}`);
+    } catch (err: any) {
+      alert(err?.message || 'Triage assessment failed.');
+    } finally {
+      setScreeningBusy(false);
+    }
+  };
+
+  const suggestions = useMemo(() => {
+    if (profile?.reproductive_mode === 'pregnant') {
+      return [
+        'What symptoms are common during this stage?',
+        'What should I know about my current pregnancy week?',
+        'When should I contact a healthcare professional?',
+        '🌸 Pregnancy Check-in',
+      ];
+    } else if (profile?.reproductive_mode === 'postpartum') {
+      return [
+        'Is this recovery symptom normal?',
+        'How can I track my recovery?',
+        'Why have my mood or sleep changed?',
+        '🩺 Symptom Triage Check',
+      ];
+    } else {
+      return [
+        'Could these symptoms be related to my cycle?',
+        'Tell me about PCOS warning signs.',
+        '🌸 PCOS Health Screening',
+        '🩺 Symptom Triage Check',
+      ];
+    }
+  }, [profile?.reproductive_mode]);
+
+  return (
+    <AppShell>
+      <PageTitle eyebrow="Your health companion" title="SITA">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={clearMessages}
+            className="rounded-full border border-white/60 bg-white/60 px-3 py-1.5 text-[10px] font-bold text-[#917688] shadow-sm backdrop-blur-md transition hover:bg-white"
+          >
+            Clear chat
+          </button>
+          <div className="flex items-center gap-2 rounded-full border border-white/60 bg-white/60 px-3 py-1.5 text-[10px] font-bold text-[#73947b] shadow-sm backdrop-blur-md">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#7fab89] shadow-[0_0_8px_rgba(127,171,137,0.8)]" /> Available
+          </div>
+        </div>
+      </PageTitle>
+
+      <Card className="mx-auto flex min-h-[650px] max-w-[850px] flex-col overflow-hidden border border-white/60 bg-white/40 p-0 shadow-[0_8px_32px_rgba(152,126,145,0.08)] backdrop-blur-2xl" testid="card-chat">
+        {/* Header */}
+        <div className="flex items-center gap-4 border-b border-white/60 bg-white/40 px-6 py-5 shadow-sm backdrop-blur-md">
+          <SitaAvatar />
+          <div>
+            <p className="text-[13px] font-bold tracking-widest uppercase text-[#5c4657]">SITA</p>
+            <p className="text-[10px] font-semibold text-[#a28c99]">Your personal health companion</p>
+          </div>
+        </div>
+
+        {/* Messages List */}
+        <div className="flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-7">
+          {messages.map((message) => {
+            const isUser = message.role === 'user';
+            return (
+              <div key={message.id} className={`flex gap-3 ${isUser ? 'justify-end' : ''}`} data-testid={`message-${message.id}`}>
+                {!isUser && <SitaAvatar small />}
+                <div
+                  className={`max-w-[82%] px-5 py-4 text-[13px] leading-relaxed shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-md border ${
+                    isUser
+                      ? 'rounded-[1.2rem] rounded-br-sm border-white/60 bg-gradient-to-br from-[#fcf9fc]/90 to-[#fdfafc]/90 text-[#785468]'
+                      : 'rounded-[1.2rem] rounded-bl-sm border-white/60 bg-white/40 text-[#5e4c6e]'
+                  }`}
+                >
+                  <p className="whitespace-pre-line">{message.text}</p>
+                  <p className="mt-2 text-[9px] font-bold tracking-wider opacity-40">{message.time}</p>
+                </div>
+              </div>
+            );
+          })}
+          {sending && (
+            <div className="flex items-center gap-3 text-xs text-[#99879a]">
+              <SitaAvatar small />
+              <div className="rounded-[1.2rem] rounded-bl-sm border border-white/60 bg-white/40 px-5 py-3 shadow-sm backdrop-blur-md">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#c3a4d3]" style={{ animationDelay: '0ms' }} />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#c3a4d3]" style={{ animationDelay: '150ms' }} />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#c3a4d3]" style={{ animationDelay: '300ms' }} />
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Suggestion Pills */}
+        <div className="border-t border-white/50 bg-white/30 px-4 py-5 backdrop-blur-md sm:px-7">
+          <div className="mb-4 flex flex-wrap gap-2">
+            {suggestions.map((sug) => (
+              <button
+                key={sug}
+                onClick={() => {
+                  if (sug.includes('PCOS')) setPcosOpen(true);
+                  else if (sug.includes('Triage')) setTriageOpen(true);
+                  else send(sug);
+                }}
+                className="rounded-full border border-white/60 bg-white/50 px-4 py-2 text-[10px] font-bold text-[#8a709d] shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)] backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/80"
+              >
+                {sug}
+              </button>
+            ))}
+          </div>
+
+          {/* Input Box matching reference design */}
+          <div className="flex items-center gap-2 rounded-[1.2rem] border border-white/80 bg-white/70 p-2 pl-5 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] backdrop-blur-md transition-all focus-within:border-white focus-within:bg-white/90 focus-within:ring-4 focus-within:ring-[#f9ebf1]/60">
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && send()}
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-[#4d394e] outline-none placeholder:text-[#baabb6]"
+              placeholder="Ask SITA anything..."
+              data-testid="input-chat-message"
+            />
+            <button
+              onClick={() => send()}
+              disabled={!text.trim() || sending}
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-[1rem] bg-gradient-to-br from-[#80647c] to-[#5d4662] text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md disabled:opacity-40 disabled:hover:translate-y-0"
+              data-testid="button-send-message"
+              aria-label="Send message"
+            >
+              <Send className="h-4 w-4 translate-x-px translate-y-px" />
+            </button>
+          </div>
+
+          <p className="mt-4 text-center text-[9px] uppercase tracking-[0.2em] text-[#a895a5]">
+            SITA provides supportive health information, not medical diagnosis.
+          </p>
+        </div>
+      </Card>
+
+      {/* PCOS Screening Modal */}
+      <Modal isOpen={pcosOpen} onClose={() => setPcosOpen(false)} title="PCOS Awareness Screening">
+        <form onSubmit={handlePCOSSubmit} className="space-y-4">
+          <p className="text-xs text-[#8c7487]">
+            This structured assessment evaluates common symptoms associated with Polycystic Ovary Syndrome.
+          </p>
+          <div className="space-y-2.5">
+            {[
+              ['Irregular, skipped, or very long cycles (>35 days)', irregularCycles, setIrregularCycles],
+              ['Excess facial or body hair growth (hirsutism)', excessHair, setExcessHair],
+              ['Persistent cystic acne or oily skin', acne, setAcne],
+              ['Hair thinning or loss around the scalp', hairThinning, setHairThinning],
+              ['Difficulty managing weight / insulin resistance signs', weightChallenge, setWeightChallenge],
+              ['Family history of PCOS or diabetes', familyHist, setFamilyHist],
+              ['Chronic pelvic discomfort or intense cramps', pelvicPain, setPelvicPain],
+            ].map(([label, val, setter]: any) => (
+              <label key={label} className="flex items-center gap-3 rounded-xl border border-[#f0e2e8] bg-white p-3 text-xs text-[#61495c] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={val}
+                  onChange={(e) => setter(e.target.checked)}
+                  className="h-4 w-4 rounded accent-[#e9779d]"
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          <button
+            type="submit"
+            disabled={screeningBusy}
+            className="mt-4 w-full rounded-full bg-[#8f75b4] py-3 text-xs font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+          >
+            {screeningBusy ? 'Evaluating with SITA...' : 'Submit Screening to SITA'}
+          </button>
+        </form>
+      </Modal>
+
+      {/* Symptom Triage Modal */}
+      <Modal isOpen={triageOpen} onClose={() => setTriageOpen(false)} title="Symptom Triage Assessment">
+        <form onSubmit={handleTriageSubmit} className="space-y-4">
+          <label className="block text-xs font-bold text-[#6f576a]">
+            What symptom are you experiencing?
+            <input
+              type="text"
+              required
+              value={triageSymptom}
+              onChange={(e) => setTriageSymptom(e.target.value)}
+              className="sita-input mt-2"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-xs font-bold text-[#6f576a]">
+              Duration (days)
+              <input
+                type="number"
+                min="1"
+                max="90"
+                value={triageDuration}
+                onChange={(e) => setTriageDuration(Number(e.target.value))}
+                className="sita-input mt-2"
+              />
+            </label>
+            <div>
+              <span className="block text-xs font-bold text-[#6f576a]">Severity</span>
+              <select
+                value={triageSeverity}
+                onChange={(e) => setTriageSeverity(e.target.value as any)}
+                className="sita-input mt-2"
+              >
+                <option value="mild">Mild</option>
+                <option value="moderate">Moderate</option>
+                <option value="severe">Severe</option>
+              </select>
+            </div>
+          </div>
+          <div className="space-y-2 pt-2">
+            <p className="text-xs font-bold text-[#c75d7e]">Red-flag check (Check if applicable):</p>
+            {[
+              ['Fever above 100.4°F / 38°C', triageFever, setTriageFever],
+              ['Extremely heavy bleeding (soaking >2 pads/hr)', triageBleeding, setTriageBleeding],
+              ['Severe sharp or escalating pain', triagePain, setTriagePain],
+            ].map(([label, val, setter]: any) => (
+              <label key={label} className="flex items-center gap-3 rounded-xl border border-[#ffe0e6] bg-[#fff7f9] p-3 text-xs text-[#784d5c] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={val}
+                  onChange={(e) => setter(e.target.checked)}
+                  className="h-4 w-4 rounded accent-[#d3547b]"
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          <button
+            type="submit"
+            disabled={screeningBusy}
+            className="mt-4 w-full rounded-full bg-[#8f75b4] py-3 text-xs font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+          >
+            {screeningBusy ? 'Analyzing...' : 'Run Triage Evaluation'}
+          </button>
+        </form>
+      </Modal>
+    </AppShell>
+  );
+}
+
+// ==========================================
+// 8. PREGNANCY MODE
+// ==========================================
