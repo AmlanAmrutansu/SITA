@@ -141,6 +141,83 @@ alter table public.health_insights enable row level security;
 alter table public.ai_conversations enable row level security;
 alter table public.chat_messages enable row level security;
 
+-- 11. Medical Documents & Longitudinal Health Memory Records
+create table if not exists public.medical_documents (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null default 'Medical Record',
+  document_type text not null default 'Prescription',
+  document_date date not null default current_date,
+  doctor_name text,
+  hospital_name text,
+  extracted_text text,
+  verification_status text not null default 'verified',
+  structured_data jsonb not null default '{}'::jsonb,
+  tags text[] not null default '{}',
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.medical_records (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null default 'Medical Document',
+  document_type text not null default 'Prescription',
+  document_date date not null default current_date,
+  doctor_name text,
+  hospital_name text,
+  extracted_text text,
+  structured_data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.medical_medications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  document_id uuid references public.medical_documents(id) on delete cascade,
+  medication_name text not null,
+  dosage text,
+  frequency text,
+  duration text,
+  instructions text,
+  start_date date,
+  end_date date,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.medical_lab_results (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  document_id uuid references public.medical_documents(id) on delete cascade,
+  test_name text not null,
+  value text not null,
+  numeric_value numeric,
+  unit text,
+  reference_range text,
+  flag text,
+  recorded_at date not null default current_date,
+  created_at timestamptz not null default now()
+);
+
+alter table public.medical_documents enable row level security;
+alter table public.medical_records enable row level security;
+alter table public.medical_medications enable row level security;
+alter table public.medical_lab_results enable row level security;
+
+drop policy if exists "medical documents own rows" on public.medical_documents;
+create policy "medical documents own rows" on public.medical_documents for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "medical records own rows" on public.medical_records;
+create policy "medical records own rows" on public.medical_records for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "medical medications own rows" on public.medical_medications;
+create policy "medical medications own rows" on public.medical_medications for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "medical lab results own rows" on public.medical_lab_results;
+create policy "medical lab results own rows" on public.medical_lab_results for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 -- Row Level Security Policies ensuring complete user isolation
 drop policy if exists "profiles own row" on public.profiles;
 create policy "profiles own row" on public.profiles for all using (auth.uid() = id) with check (auth.uid() = id);

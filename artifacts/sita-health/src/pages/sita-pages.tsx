@@ -48,9 +48,11 @@ import {
   X,
   Paperclip,
   FilePlus,
+  FileText,
 } from 'lucide-react';
 import { AppShell, SitaLogo, OriginalSitaMark } from '@/components/AppShell';
 import { SitaAvatar, WellnessIllustration } from '@/components/Illustration';
+import { SitaChatInterface } from '@/components/SitaChatInterface';
 import { moods, modeDetails, type MoodEntry, type ReproductiveMode, type Mood } from '@/data/mock';
 import { useSitaStore, type CycleLogItem } from '@/data/store';
 import { api, type PCOSScreeningInput, type SymptomTriageInput } from '@/lib/api';
@@ -237,9 +239,15 @@ export function AuthPage() {
 // ONBOARDING PAGE
 // ==========================================
 
+// ==========================================
+// 1. ONBOARDING & PERSONALIZATION (MULTI-STEP GUIDED FLOW)
+// ==========================================
+
 export function OnboardingPage() {
   const [, setLocation] = useLocation();
   const { mode, setMode, updateProfile, updatePregnancyData, updatePostpartumData, profile } = useSitaStore();
+
+  const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Account / General
   const [name, setName] = useState(profile?.display_name || '');
@@ -262,14 +270,29 @@ export function OnboardingPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const handleNextFromStep1 = (e: FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Please enter your name or nickname to continue.');
+      return;
+    }
+    setError('');
+    setStep(2);
+  };
+
+  const handleNextFromStep2 = () => {
+    setError('');
+    setStep(3);
+  };
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setBusy(true);
 
     try {
-      if (!name.trim()) throw new Error("Please enter your name or nickname.");
-      
+      if (!name.trim()) throw new Error('Please enter your name or nickname.');
+
       await updateProfile({
         display_name: name.trim(),
         date_of_birth: dateOfBirth || null,
@@ -282,13 +305,13 @@ export function OnboardingPage() {
       });
 
       if (mode === 'pregnant') {
-        if (!dueDate) throw new Error("Please provide your estimated due date.");
+        if (!dueDate) throw new Error('Please provide your estimated due date.');
         await updatePregnancyData({
           due_date: dueDate || undefined,
           pregnancy_start_date: pregnancyStartDate || undefined,
         });
       } else if (mode === 'postpartum') {
-        if (!birthDate) throw new Error("Please provide your childbirth date.");
+        if (!birthDate) throw new Error('Please provide your childbirth date.');
         await updatePostpartumData({
           birth_date: birthDate || undefined,
           bleeding_level: bleedingLevel as any,
@@ -303,135 +326,401 @@ export function OnboardingPage() {
     }
   };
 
+  const stageOptions = [
+    {
+      id: 'not-pregnant' as const,
+      icon: <Flower2 className="h-6 w-6" />,
+      title: 'Cycle & Symptom Tracking',
+      desc: 'Track menstrual cycles, predict fertile windows, understand hormonal phases, and monitor symptoms.',
+      color: 'from-[#fff0f4] to-[#fdf4f7] border-[#e889a6] text-[#b55778]',
+      badge: '🌸 Cycle Health',
+    },
+    {
+      id: 'pregnant' as const,
+      icon: <Baby className="h-6 w-6" />,
+      title: 'Pregnancy Journey',
+      desc: 'Track pregnancy milestones, prepare for prenatal appointments, and monitor kicks and symptoms.',
+      color: 'from-[#f4f1fa] to-[#faf8fd] border-[#937bb8] text-[#785c9f]',
+      badge: '🤰 Prenatal',
+    },
+    {
+      id: 'postpartum' as const,
+      icon: <HeartPulse className="h-6 w-6" />,
+      title: 'Postpartum Recovery',
+      desc: 'Monitor healing milestones, recovery bleeding (lochia), mood, sleep, and pelvic floor wellness.',
+      color: 'from-[#edf6ef] to-[#f6faf7] border-[#78a982] text-[#558a60]',
+      badge: '🌿 Postpartum',
+    },
+  ];
+
   return (
-    <div className="min-h-dvh bg-[#fffafa] px-5 py-12 sm:grid sm:place-items-center">
-      <form onSubmit={submit} className="mx-auto w-full max-w-2xl">
-        <div className="text-center sm:text-left">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-[.18em] text-[#b7829a]">A little context helps</p>
-          <h1 className="font-display text-4xl text-[#4d394e]">Personalize your SITA</h1>
-          <p className="mt-3 text-sm leading-relaxed text-[#8d7587]">Only share what feels useful. You can change these details anytime in your Profile settings.</p>
+    <div className="min-h-[100dvh] bg-[#fdf9fa] px-4 py-8 sm:py-12 flex flex-col justify-center items-center relative overflow-hidden">
+      {/* Background Soft Glows */}
+      <div className="absolute -right-24 top-10 h-80 w-80 rounded-full bg-[#f8e6ee] opacity-60 blur-3xl pointer-events-none" />
+      <div className="absolute -left-24 bottom-10 h-80 w-80 rounded-full bg-[#efe8f7] opacity-60 blur-3xl pointer-events-none" />
+
+      <div className="w-full max-w-2xl relative z-10">
+        {/* Header Branding */}
+        <div className="text-center mb-8">
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#f8e7ef] to-[#ebdcf2] shadow-sm mb-3">
+            <OriginalSitaMark className="h-8 w-8" />
+          </div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#b7829a]">Welcome to SITA 🌸</p>
+          <h1 className="mt-1 font-display text-3xl sm:text-4xl font-bold tracking-tight text-[#4c364c]">
+            Let’s personalize your health space
+          </h1>
+          <p className="mt-2 text-xs sm:text-sm text-[#8a7285] max-w-md mx-auto leading-relaxed">
+            This information helps SITA understand your health journey and tailor longitudinal guidance.
+          </p>
         </div>
 
-        <div className="mt-8 space-y-8 rounded-[32px] border border-[#f0e0e8] bg-white p-8 shadow-[0_18px_50px_rgba(89,55,76,.08)] sm:p-10">
-          
-          {/* Section: Personal Information */}
-          <section className="space-y-5">
-            <h2 className="text-sm font-bold tracking-wide text-[#765f71] uppercase border-b border-[#f0e0e8] pb-2">Personal Information</h2>
-            <div className="grid gap-6 sm:grid-cols-2">
-              <label className="block text-sm font-bold text-[#765f71]">
-                Your Name / Nickname <span className="text-[#e889a6]">*</span>
-                <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Maya" className="sita-input mt-2 w-full text-base" />
-              </label>
-              <label className="block text-sm font-bold text-[#765f71]">
-                Date of Birth <span className="font-normal text-[#b09aa7]">(optional)</span>
-                <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className="sita-input mt-2 w-full text-base" />
-              </label>
-            </div>
-          </section>
+        {/* Multi-Step Progress Stepper */}
+        <div className="mb-8 flex items-center justify-between rounded-2xl bg-white/75 p-3.5 border border-white/80 shadow-sm backdrop-blur-md">
+          {[
+            { num: 1, label: 'About You' },
+            { num: 2, label: 'Health Stage' },
+            { num: 3, label: 'Health Profile' },
+          ].map((item, idx) => {
+            const isActive = step === item.num;
+            const isDone = step > item.num;
+            return (
+              <React.Fragment key={item.num}>
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`grid h-7 w-7 place-items-center rounded-full text-xs font-bold transition-all ${
+                      isDone
+                        ? 'bg-[#5e9968] text-white shadow-sm'
+                        : isActive
+                        ? 'bg-[#d65f8a] text-white shadow-sm ring-4 ring-[#fce8f0]'
+                        : 'bg-[#f0e4ea] text-[#9a8594]'
+                    }`}
+                  >
+                    {isDone ? <Check className="h-3.5 w-3.5" /> : item.num}
+                  </div>
+                  <span
+                    className={`hidden sm:inline text-xs font-semibold ${
+                      isActive ? 'text-[#4c3548] font-bold' : isDone ? 'text-[#628b6a]' : 'text-[#a18e9d]'
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </div>
+                {idx < 2 && <div className="h-px flex-1 mx-2 bg-[#ebdbe4]" />}
+              </React.Fragment>
+            );
+          })}
+        </div>
 
-          {/* Section: Reproductive Stage */}
-          <section className="space-y-5">
-            <h2 className="text-sm font-bold tracking-wide text-[#765f71] uppercase border-b border-[#f0e0e8] pb-2">Reproductive Stage</h2>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {(['not-pregnant', 'pregnant', 'postpartum'] as ReproductiveMode[]).map((item) => (
+        {/* Card Container */}
+        <div className="rounded-[2rem] border border-white/80 bg-white/90 p-6 sm:p-10 shadow-[0_16px_40px_rgba(152,126,145,0.08)] backdrop-blur-xl transition-all">
+          
+          {/* STEP 1: ABOUT YOU */}
+          {step === 1 && (
+            <form onSubmit={handleNextFromStep1} className="space-y-6 animate-in fade-in duration-300">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#b27997]">Step 1 of 3</span>
+                <h2 className="font-display text-2xl font-bold text-[#4c3549] mt-0.5">Tell us about yourself</h2>
+                <p className="text-xs text-[#8c7587] mt-1">SITA uses this to personalize conversations and recommendations.</p>
+              </div>
+
+              <div className="space-y-5 pt-2">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#6b5266]">
+                    Your Name or Nickname <span className="text-[#d85880]">*</span>
+                  </label>
+                  <p className="text-[11px] text-[#9b8595]">How should SITA address you in chats and daily check-ins?</p>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Maya"
+                    className="sita-input w-full text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#6b5266]">
+                    Date of Birth <span className="text-[#9e8898] font-normal lowercase">(optional)</span>
+                  </label>
+                  <p className="text-[11px] text-[#9b8595]">Helps tailor stage-appropriate hormonal and clinical insights.</p>
+                  <input
+                    type="date"
+                    value={dateOfBirth}
+                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    className="sita-input w-full text-sm"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="rounded-2xl bg-[#fff0f3] p-3.5 border border-[#fce8ef] text-xs font-semibold text-[#b55778]">
+                  {error}
+                </div>
+              )}
+
+              <div className="pt-3">
+                <button
+                  type="submit"
+                  className="w-full rounded-2xl bg-gradient-to-r from-[#d75f8a] to-[#bf4a74] px-6 py-4 text-sm font-bold text-white shadow-[0_8px_24px_rgba(215,95,138,0.25)] transition-all hover:-translate-y-0.5 hover:shadow-lg flex items-center justify-center gap-2"
+                >
+                  <span>Continue to Stage Selection</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* STEP 2: REPRODUCTIVE STAGE */}
+          {step === 2 && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#b27997]">Step 2 of 3</span>
+                <h2 className="font-display text-2xl font-bold text-[#4c3549] mt-0.5">Choose your primary health stage</h2>
+                <p className="text-xs text-[#8c7587] mt-1">We will customize your dashboard, cycle predictions, and SITA AI reasoning.</p>
+              </div>
+
+              <div className="space-y-3.5 pt-2">
+                {stageOptions.map((item) => {
+                  const isSelected = mode === item.id;
+                  return (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() => setMode(item.id)}
+                      className={`w-full flex items-start gap-4 p-5 rounded-2xl border text-left transition-all ${
+                        isSelected
+                          ? `bg-gradient-to-br ${item.color} shadow-[0_8px_24px_rgba(189,102,134,0.12)] ring-2 ring-offset-1 ring-[#e889a6]`
+                          : 'border-[#eee0e7] bg-white/70 hover:bg-white hover:border-[#e3bccb]'
+                      }`}
+                    >
+                      <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white shadow-sm`}>
+                        {item.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <strong className="block text-sm font-bold text-[#4f374c]">{item.title}</strong>
+                          <span className={`grid h-5 w-5 place-items-center rounded-full border ${isSelected ? 'bg-[#d65f8a] border-[#d65f8a] text-white' : 'border-[#dcccd6] text-transparent'}`}>
+                            <Check className="h-3 w-3" />
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-[#866e80] leading-relaxed">{item.desc}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-3 pt-3">
                 <button
                   type="button"
-                  key={item}
-                  onClick={() => setMode(item)}
-                  className={`rounded-2xl border px-4 py-4 text-sm font-bold transition ${mode === item ? 'border-[#e889a6] bg-[#fff0f4] text-[#b55778] shadow-sm' : 'border-[#eee2e8] text-[#927e8d] hover:bg-[#faf6f8]'}`}
+                  onClick={() => setStep(1)}
+                  className="rounded-2xl border border-[#ebd6e2] bg-white px-5 py-4 text-xs font-bold text-[#7a6074] hover:bg-[#faf4f8] transition"
                 >
-                  {modeDetails[item].title}
+                  ← Back
                 </button>
-              ))}
-            </div>
-          </section>
-
-          {/* Section: Dynamic Stage Information */}
-          <section>
-            {mode === 'not-pregnant' && (
-              <div className="rounded-[24px] bg-[#faf6f8] p-6 space-y-5 border border-[#eee2e8]">
-                <h3 className="text-sm font-bold text-[#765f71]">Cycle Information</h3>
-                <div className="grid gap-6 sm:grid-cols-3">
-                  <label className="block text-sm font-bold text-[#765f71]">
-                    Cycle length (days)
-                    <input type="number" min="15" max="60" required value={cycleLength} onChange={(e) => setCycleLength(e.target.value)} className="sita-input mt-2 w-full text-base" />
-                  </label>
-                  <label className="block text-sm font-bold text-[#765f71]">
-                    Period length (days)
-                    <input type="number" min="1" max="15" required value={periodLength} onChange={(e) => setPeriodLength(e.target.value)} className="sita-input mt-2 w-full text-base" />
-                  </label>
-                  <label className="block text-sm font-bold text-[#765f71]">
-                    Last period start
-                    <input type="date" required value={lastPeriod} onChange={(e) => setLastPeriod(e.target.value)} className="sita-input mt-2 w-full text-base" />
-                  </label>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleNextFromStep2}
+                  className="flex-1 rounded-2xl bg-gradient-to-r from-[#d75f8a] to-[#bf4a74] px-6 py-4 text-sm font-bold text-white shadow-[0_8px_24px_rgba(215,95,138,0.25)] transition-all hover:-translate-y-0.5 hover:shadow-lg flex items-center justify-center gap-2"
+                >
+                  <span>Continue to Health Details</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
               </div>
-            )}
-
-            {mode === 'pregnant' && (
-              <div className="rounded-[24px] bg-[#f4f2f9] p-6 space-y-5 border border-[#e6e2f1]">
-                <h3 className="text-sm font-bold text-[#6b5887]">Pregnancy Information</h3>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <label className="block text-sm font-bold text-[#6b5887]">
-                    Estimated Due Date <span className="text-[#b55778]">*</span>
-                    <input type="date" required value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="sita-input mt-2 w-full text-base border-[#e6e2f1]" />
-                  </label>
-                  <label className="block text-sm font-bold text-[#6b5887]">
-                    Last Menstrual Period <span className="font-normal opacity-70">(optional)</span>
-                    <input type="date" value={pregnancyStartDate} onChange={(e) => setPregnancyStartDate(e.target.value)} className="sita-input mt-2 w-full text-base border-[#e6e2f1]" />
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {mode === 'postpartum' && (
-              <div className="rounded-[24px] bg-[#edf6ef] p-6 space-y-5 border border-[#d8eadc]">
-                <h3 className="text-sm font-bold text-[#5c8a66]">Postpartum Information</h3>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <label className="block text-sm font-bold text-[#5c8a66]">
-                    Childbirth Date <span className="text-[#b55778]">*</span>
-                    <input type="date" required value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="sita-input mt-2 w-full text-base border-[#d8eadc]" />
-                  </label>
-                  <label className="block text-sm font-bold text-[#5c8a66]">
-                    Current Bleeding Level
-                    <select value={bleedingLevel} onChange={(e) => setBleedingLevel(e.target.value)} className="sita-input mt-2 w-full text-base border-[#d8eadc] bg-white">
-                      <option value="none">None</option>
-                      <option value="light">Light</option>
-                      <option value="normal">Normal</option>
-                      <option value="heavy">Heavy</option>
-                    </select>
-                  </label>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Section: Additional Notes */}
-          <section className="space-y-3">
-            <label className="block text-sm font-bold text-[#765f71]">
-              Anything relevant for SITA to know? <span className="font-normal text-[#b09aa7]">(optional)</span>
-              <textarea
-                value={healthNotes}
-                onChange={(e) => setHealthNotes(e.target.value)}
-                className="sita-input mt-2 w-full min-h-[100px] text-base resize-none"
-                placeholder="e.g. Trying to conceive, PCOS awareness, irregular cycles, general health goals..."
-              />
-            </label>
-          </section>
-
-          {error && (
-            <div className="rounded-2xl bg-[#fff0f3] p-4 border border-[#fce8ef]">
-              <p className="text-sm font-semibold text-[#b55778]">{error}</p>
             </div>
           )}
 
-          <div className="pt-2">
-            <button disabled={busy} className="w-full rounded-[20px] bg-[#e9779d] px-6 py-4 text-base font-bold text-white shadow-lg shadow-[#e9779d]/20 transition hover:-translate-y-0.5 hover:shadow-xl hover:bg-[#e26a93] disabled:opacity-60 disabled:hover:translate-y-0">
-              {busy ? 'Saving your health profile…' : 'Complete Setup & Enter SITA'}
-            </button>
-          </div>
+          {/* STEP 3: HEALTH PROFILE & DETAILS */}
+          {step === 3 && (
+            <form onSubmit={submit} className="space-y-6 animate-in fade-in duration-300">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#b27997]">Step 3 of 3</span>
+                <h2 className="font-display text-2xl font-bold text-[#4c3549] mt-0.5">Health Profile &amp; Context</h2>
+                <p className="text-xs text-[#8c7587] mt-1">Specific metrics tailored to your {modeDetails[mode].title.toLowerCase()} stage.</p>
+              </div>
+
+              {/* Dynamic Mode Form */}
+              <div className="space-y-4 pt-1">
+                {mode === 'not-pregnant' && (
+                  <div className="rounded-2xl bg-[#faf4f8] p-5 border border-[#eee2eb] space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Flower2 className="h-4 w-4 text-[#bf5c86]" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#795d73]">Cycle Tracking Details</h3>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="block text-xs font-bold text-[#6b5266]">
+                          Typical Cycle Length (days)
+                        </label>
+                        <p className="text-[10px] text-[#9b8595]">Interval between periods (average is 28)</p>
+                        <input
+                          type="number"
+                          min="15"
+                          max="60"
+                          required
+                          value={cycleLength}
+                          onChange={(e) => setCycleLength(e.target.value)}
+                          className="sita-input w-full text-sm bg-white"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-xs font-bold text-[#6b5266]">
+                          Period Duration (days)
+                        </label>
+                        <p className="text-[10px] text-[#9b8595]">Days bleeding typically lasts (4–7)</p>
+                        <input
+                          type="number"
+                          min="1"
+                          max="15"
+                          required
+                          value={periodLength}
+                          onChange={(e) => setPeriodLength(e.target.value)}
+                          className="sita-input w-full text-sm bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-[#6b5266]">
+                        Last Period Start Date
+                      </label>
+                      <p className="text-[10px] text-[#9b8595]">First day of your most recent period</p>
+                      <input
+                        type="date"
+                        value={lastPeriod}
+                        onChange={(e) => setLastPeriod(e.target.value)}
+                        className="sita-input w-full text-sm bg-white"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {mode === 'pregnant' && (
+                  <div className="rounded-2xl bg-[#f4f1fa] p-5 border border-[#e5dfef] space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Baby className="h-4 w-4 text-[#8565ad]" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#69508b]">Pregnancy Information</h3>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="block text-xs font-bold text-[#69508b]">
+                          Estimated Due Date <span className="text-[#d85880]">*</span>
+                        </label>
+                        <p className="text-[10px] text-[#9884b2]">From ultrasound or healthcare provider</p>
+                        <input
+                          type="date"
+                          required
+                          value={dueDate}
+                          onChange={(e) => setDueDate(e.target.value)}
+                          className="sita-input w-full text-sm bg-white"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-xs font-bold text-[#69508b]">
+                          Last Menstrual Period <span className="text-[#9884b2] font-normal">(optional)</span>
+                        </label>
+                        <p className="text-[10px] text-[#9884b2]">Used to estimate gestational age</p>
+                        <input
+                          type="date"
+                          value={pregnancyStartDate}
+                          onChange={(e) => setPregnancyStartDate(e.target.value)}
+                          className="sita-input w-full text-sm bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {mode === 'postpartum' && (
+                  <div className="rounded-2xl bg-[#edf6ef] p-5 border border-[#d8eadc] space-y-4">
+                    <div className="flex items-center gap-2">
+                      <HeartPulse className="h-4 w-4 text-[#5c8a66]" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#5c8a66]">Postpartum Details</h3>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="block text-xs font-bold text-[#5c8a66]">
+                          Childbirth Date <span className="text-[#d85880]">*</span>
+                        </label>
+                        <p className="text-[10px] text-[#86a88d]">Date your baby was born</p>
+                        <input
+                          type="date"
+                          required
+                          value={birthDate}
+                          onChange={(e) => setBirthDate(e.target.value)}
+                          className="sita-input w-full text-sm bg-white"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-xs font-bold text-[#5c8a66]">
+                          Current Bleeding Stage
+                        </label>
+                        <p className="text-[10px] text-[#86a88d]">Postpartum lochia/recovery level</p>
+                        <select
+                          value={bleedingLevel}
+                          onChange={(e) => setBleedingLevel(e.target.value)}
+                          className="sita-input w-full text-sm bg-white"
+                        >
+                          <option value="none">None / Resolved</option>
+                          <option value="light">Light</option>
+                          <option value="normal">Normal / Moderate</option>
+                          <option value="heavy">Heavy</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Health Notes */}
+                <div className="space-y-1.5 pt-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#6b5266]">
+                    Anything relevant for SITA to know? <span className="text-[#9e8898] font-normal lowercase">(optional)</span>
+                  </label>
+                  <p className="text-[11px] text-[#9b8595]">e.g. Trying to conceive, PCOS awareness, irregular cycles, or general health goals.</p>
+                  <textarea
+                    value={healthNotes}
+                    onChange={(e) => setHealthNotes(e.target.value)}
+                    rows={3}
+                    className="sita-input w-full text-sm resize-none"
+                    placeholder="Provide any health context you would like SITA to securely remember..."
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="rounded-2xl bg-[#fff0f3] p-3.5 border border-[#fce8ef] text-xs font-semibold text-[#b55778]">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="rounded-2xl border border-[#ebd6e2] bg-white px-5 py-4 text-xs font-bold text-[#7a6074] hover:bg-[#faf4f8] transition"
+                >
+                  ← Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="flex-1 rounded-2xl bg-gradient-to-r from-[#d75f8a] to-[#bf4a74] px-6 py-4 text-sm font-bold text-white shadow-[0_8px_24px_rgba(215,95,138,0.25)] transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-50"
+                >
+                  {busy ? 'Personalizing your health space…' : 'Complete Setup & Enter SITA 🌸'}
+                </button>
+              </div>
+            </form>
+          )}
+
         </div>
-      </form>
+      </div>
     </div>
   );
 }
@@ -668,35 +957,57 @@ export function HomePage() {
               <h2 className="font-display text-[1.4rem] text-[#553f54]">Quick actions</h2>
               <MoreHorizontal className="h-4 w-4 text-[#bca4b2]" />
             </div>
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5">
               <Link
                 href="/cycle"
-                className="flex min-h-[90px] flex-col items-center justify-center gap-2 rounded-[1.2rem] bg-white/60 p-2 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/80"
+                className="flex min-h-[85px] items-center gap-3 rounded-[1.2rem] bg-white/60 p-3.5 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/80"
               >
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#c76b8b] shadow-[0_4px_12px_rgba(199,107,139,0.15)]">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#c76b8b] shadow-[0_4px_12px_rgba(199,107,139,0.15)]">
                   <Droplets className="h-5 w-5" />
                 </span>
-                <span className="text-[10px] font-bold text-[#816d7c]">Log Period</span>
+                <div>
+                  <span className="block text-xs font-bold text-[#553f54]">Log Period</span>
+                  <span className="text-[10px] text-[#937b8f]">Track cycle day</span>
+                </div>
+              </Link>
+
+              <Link
+                href="/records"
+                className="flex min-h-[85px] items-center gap-3 rounded-[1.2rem] bg-white/60 p-3.5 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/80"
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#ba567a] shadow-[0_4px_12px_rgba(186,86,122,0.15)]">
+                  <FileText className="h-5 w-5" />
+                </span>
+                <div>
+                  <span className="block text-xs font-bold text-[#553f54]">Health Memory</span>
+                  <span className="text-[10px] text-[#937b8f]">Meds &amp; Reports</span>
+                </div>
               </Link>
 
               <Link
                 href="/mood"
-                className="flex min-h-[90px] flex-col items-center justify-center gap-2 rounded-[1.2rem] bg-white/60 p-2 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/80"
+                className="flex min-h-[85px] items-center gap-3 rounded-[1.2rem] bg-white/60 p-3.5 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/80"
               >
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#ca9960] shadow-[0_4px_12px_rgba(202,153,96,0.15)]">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#ca9960] shadow-[0_4px_12px_rgba(202,153,96,0.15)]">
                   <Sun className="h-5 w-5" />
                 </span>
-                <span className="text-[10px] font-bold text-[#816d7c]">Log Mood</span>
+                <div>
+                  <span className="block text-xs font-bold text-[#553f54]">Log Mood</span>
+                  <span className="text-[10px] text-[#937b8f]">Daily energy</span>
+                </div>
               </Link>
 
               <button
                 onClick={() => setSymptomModalOpen(true)}
-                className="flex min-h-[90px] flex-col items-center justify-center gap-2 rounded-[1.2rem] bg-white/60 p-2 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/80"
+                className="flex min-h-[85px] items-center gap-3 rounded-[1.2rem] bg-white/60 p-3.5 shadow-sm backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white/80"
               >
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#8871ac] shadow-[0_4px_12px_rgba(136,113,172,0.15)]">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#8871ac] shadow-[0_4px_12px_rgba(136,113,172,0.15)]">
                   <Sparkles className="h-5 w-5" />
                 </span>
-                <span className="text-[10px] font-bold text-[#816d7c]">Add Symptom</span>
+                <div className="text-left">
+                  <span className="block text-xs font-bold text-[#553f54]">Add Symptom</span>
+                  <span className="text-[10px] text-[#937b8f]">Quick check-in</span>
+                </div>
               </button>
             </div>
 
@@ -1423,478 +1734,25 @@ export function InsightsPage() {
 }
 
 // ==========================================
-// 7. UNIFIED SITA AI ASSISTANT
+// 7. UNIFIED SITA AI ASSISTANT & CHAT
 // ==========================================
 export function SitaPage() {
-  const { messages, sendMessage, clearMessages, runPCOSScreening, runSymptomTriage, profile } = useSitaStore();
-  const [text, setText] = useState('');
-  const [sending, setSending] = useState(false);
-  const [uploadingDoc, setUploadingDoc] = useState(false);
-  const [extractedData, setExtractedData] = useState<any>(null);
-  const { addMedicalRecord } = useSitaStore();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    // Read file as base64
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      try {
-        setUploadingDoc(true);
-        const base64 = ev.target?.result;
-        const res = await fetch('/api/extract-medical-record', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64 })
-        });
-        const data = await res.json();
-        if (data.success) {
-          setExtractedData(data);
-        } else {
-          alert('Could not process document: ' + data.error);
-        }
-      } catch (err) {
-        alert('Upload failed');
-      } finally {
-        setUploadingDoc(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const [pcosOpen, setPcosOpen] = useState(false);
-  const [triageOpen, setTriageOpen] = useState(false);
   const searchString = useSearch();
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(searchString);
-    if (searchParams.get('pcos') === 'true') setPcosOpen(true);
-    if (searchParams.get('triage') === 'true') setTriageOpen(true);
-  }, [searchString]);
-
-  // PCOS form state
-  const [irregularCycles, setIrregularCycles] = useState(true);
-  const [excessHair, setExcessHair] = useState(false);
-  const [acne, setAcne] = useState(true);
-  const [hairThinning, setHairThinning] = useState(false);
-  const [weightChallenge, setWeightChallenge] = useState(false);
-  const [familyHist, setFamilyHist] = useState(false);
-  const [pelvicPain, setPelvicPain] = useState(true);
-  const [screeningBusy, setScreeningBusy] = useState(false);
-
-  // Triage form state
-  const [triageSymptom, setTriageSymptom] = useState('Pelvic cramps');
-  const [triageDuration, setTriageDuration] = useState(2);
-  const [triageSeverity, setTriageSeverity] = useState<'mild' | 'moderate' | 'severe'>('moderate');
-  const [triageFever, setTriageFever] = useState(false);
-  const [triageBleeding, setTriageBleeding] = useState(false);
-  const [triagePain, setTriagePain] = useState(false);
-
-  const send = async (value = text) => {
-    if (!value.trim() || sending) return;
-    const msg = value.trim();
-    setText('');
-    setSending(true);
-    try {
-      await sendMessage(msg);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handlePCOSSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setScreeningBusy(true);
-    try {
-      const { result, explanation, id } = await runPCOSScreening({
-        irregularCycles,
-        cycleLengthDays: profile?.typical_cycle_length || 28,
-        excessHairGrowth: excessHair,
-        persistentAcne: acne,
-        hairThinning,
-        weightChallenges: weightChallenge,
-        familyHistory: familyHist,
-        pelvicPain,
-      });
-      setPcosOpen(false);
-      await sendMessage(`I just completed a PCOS awareness screening (Assessment ID: ${id}). What does my result mean?`, id);
-    } catch (err: any) {
-      alert(err?.message || 'Screening request failed.');
-    } finally {
-      setScreeningBusy(false);
-    }
-  };
-
-  const handleTriageSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setScreeningBusy(true);
-    try {
-      const { result, explanation, id } = await runSymptomTriage({
-        symptom: triageSymptom,
-        durationDays: triageDuration,
-        severity: triageSeverity,
-        hasFever: triageFever,
-        heavyBleeding: triageBleeding,
-        severePain: triagePain,
-        dizzinessOrFainting: false,
-        reproductiveMode: profile?.reproductive_mode || 'not-pregnant',
-      });
-      setTriageOpen(false);
-      await sendMessage(`I conducted a symptom triage for "${triageSymptom}" (Assessment ID: ${id}). What does my result mean?`, id);
-    } catch (err: any) {
-      alert(err?.message || 'Triage assessment failed.');
-    } finally {
-      setScreeningBusy(false);
-    }
-  };
-
-  const suggestions = useMemo(() => {
-    if (profile?.reproductive_mode === 'pregnant') {
-      return [
-        'What symptoms are common during this stage?',
-        'What should I know about my current pregnancy week?',
-        'When should I contact a healthcare professional?',
-        '🌸 Pregnancy Check-in',
-      ];
-    } else if (profile?.reproductive_mode === 'postpartum') {
-      return [
-        'Is this recovery symptom normal?',
-        'How can I track my recovery?',
-        'Why have my mood or sleep changed?',
-        '🩺 Symptom Triage Check',
-      ];
-    } else {
-      return [
-        'Could these symptoms be related to my cycle?',
-        'Tell me about PCOS warning signs.',
-        '🌸 PCOS Health Screening',
-        '🩺 Symptom Triage Check',
-      ];
-    }
-  }, [profile?.reproductive_mode]);
+  const searchParams = useMemo(() => new URLSearchParams(searchString), [searchString]);
+  
+  const initialPrompt = searchParams.get('prompt') || undefined;
+  const initialPcos = searchParams.get('pcos') === 'true';
+  const initialTriage = searchParams.get('triage') === 'true';
 
   return (
     <AppShell>
-      <PageTitle eyebrow="Your health companion" title="SITA">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={clearMessages}
-            className="rounded-full border border-white/60 bg-white/60 px-3 py-1.5 text-[10px] font-bold text-[#917688] shadow-sm backdrop-blur-md transition hover:bg-white"
-          >
-            Clear chat
-          </button>
-          <div className="flex items-center gap-2 rounded-full border border-white/60 bg-white/60 px-3 py-1.5 text-[10px] font-bold text-[#73947b] shadow-sm backdrop-blur-md">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#7fab89] shadow-[0_0_8px_rgba(127,171,137,0.8)]" /> Available
-          </div>
-        </div>
-      </PageTitle>
-
-      <Card className="mx-auto flex min-h-[650px] max-w-[850px] flex-col overflow-hidden border border-white/60 bg-white/40 p-0 shadow-[0_8px_32px_rgba(152,126,145,0.08)] backdrop-blur-2xl" testid="card-chat">
-        {/* Header */}
-        <div className="flex items-center gap-4 border-b border-white/60 bg-white/40 px-6 py-5 shadow-sm backdrop-blur-md">
-          <SitaAvatar />
-          <div>
-            <p className="text-[13px] font-bold tracking-widest uppercase text-[#5c4657]">SITA</p>
-            <p className="text-[10px] font-semibold text-[#a28c99]">Your personal health companion</p>
-          </div>
-        </div>
-
-        {/* Messages List */}
-        <div className="flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-7">
-          {messages.map((message) => {
-            const isUser = message.role === 'user';
-            return (
-              <div key={message.id} className={`flex gap-3 ${isUser ? 'justify-end' : ''}`} data-testid={`message-${message.id}`}>
-                {!isUser && <SitaAvatar small />}
-                <div
-                  className={`max-w-[82%] px-5 py-4 text-[13px] leading-relaxed shadow-[inset_0_2px_4px_rgba(255,255,255,0.6)] backdrop-blur-md border ${
-                    isUser
-                      ? 'rounded-[1.2rem] rounded-br-sm border-white/60 bg-gradient-to-br from-[#fcf9fc]/90 to-[#fdfafc]/90 text-[#785468]'
-                      : 'rounded-[1.2rem] rounded-bl-sm border-white/60 bg-white/40 text-[#5e4c6e]'
-                  }`}
-                >
-                  <p className="whitespace-pre-line">{message.text}</p>
-                  <p className="mt-2 text-[9px] font-bold tracking-wider opacity-40">{message.time}</p>
-                </div>
-              </div>
-            );
-          })}
-          {sending && (
-            <div className="flex items-center gap-3 text-xs text-[#99879a]">
-              <SitaAvatar small />
-              <div className="rounded-[1.2rem] rounded-bl-sm border border-white/60 bg-white/40 px-5 py-3 shadow-sm backdrop-blur-md">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#c3a4d3]" style={{ animationDelay: '0ms' }} />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#c3a4d3]" style={{ animationDelay: '150ms' }} />
-                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#c3a4d3]" style={{ animationDelay: '300ms' }} />
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Suggestion Pills */}
-        <div className="border-t border-white/50 bg-white/30 px-4 py-5 backdrop-blur-md sm:px-7">
-          <div className="mb-4 flex flex-wrap gap-2">
-            {suggestions.map((sug) => (
-              <button
-                key={sug}
-                onClick={() => {
-                  if (sug.includes('PCOS')) setPcosOpen(true);
-                  else if (sug.includes('Triage')) setTriageOpen(true);
-                  else send(sug);
-                }}
-                className="rounded-full border border-white/60 bg-white/50 px-4 py-2 text-[10px] font-bold text-[#8a709d] shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)] backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/80"
-              >
-                {sug}
-              </button>
-            ))}
-          </div>
-
-          {/* Input Box matching reference design */}
-          <div className="flex items-center gap-2 rounded-[1.2rem] border border-white/80 bg-white/70 p-2 pl-5 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)] backdrop-blur-md transition-all focus-within:border-white focus-within:bg-white/90 focus-within:ring-4 focus-within:ring-[#f9ebf1]/60">
-            
-            <input type="file" accept="image/*,.pdf" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={sending || uploadingDoc}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-[#b19db2] transition hover:bg-white hover:text-[#5d4662]"
-              title="Add Medical Record"
-            >
-              {uploadingDoc ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#b19db2] border-t-[#5d4662]" /> : <FilePlus className="h-4 w-4" />}
-            </button>
-            <input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && send()}
-              className="min-w-0 flex-1 bg-transparent text-[13px] text-[#4d394e] outline-none placeholder:text-[#baabb6]"
-              placeholder="Ask SITA anything..."
-              data-testid="input-chat-message"
-            />
-            <button
-              onClick={() => send()}
-              disabled={!text.trim() || sending}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-[1rem] bg-gradient-to-br from-[#80647c] to-[#5d4662] text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md disabled:opacity-40 disabled:hover:translate-y-0"
-              data-testid="button-send-message"
-              aria-label="Send message"
-            >
-              <Send className="h-4 w-4 translate-x-px translate-y-px" />
-            </button>
-          </div>
-
-          <p className="mt-4 text-center text-[9px] uppercase tracking-[0.2em] text-[#a895a5]">
-            SITA provides supportive health information, not medical diagnosis.
-          </p>
-        </div>
-      </Card>
-
-      {/* PCOS Screening Modal */}
-      <Modal isOpen={pcosOpen} onClose={() => setPcosOpen(false)} title="PCOS Awareness Screening">
-        <form onSubmit={handlePCOSSubmit} className="space-y-4">
-          <p className="text-xs text-[#8c7487]">
-            This structured assessment evaluates common symptoms associated with Polycystic Ovary Syndrome.
-          </p>
-          <div className="space-y-2.5">
-            {[
-              ['Irregular, skipped, or very long cycles (>35 days)', irregularCycles, setIrregularCycles],
-              ['Excess facial or body hair growth (hirsutism)', excessHair, setExcessHair],
-              ['Persistent cystic acne or oily skin', acne, setAcne],
-              ['Hair thinning or loss around the scalp', hairThinning, setHairThinning],
-              ['Difficulty managing weight / insulin resistance signs', weightChallenge, setWeightChallenge],
-              ['Family history of PCOS or diabetes', familyHist, setFamilyHist],
-              ['Chronic pelvic discomfort or intense cramps', pelvicPain, setPelvicPain],
-            ].map(([label, val, setter]: any) => (
-              <label key={label} className="flex items-center gap-3 rounded-xl border border-[#f0e2e8] bg-white p-3 text-xs text-[#61495c] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={val}
-                  onChange={(e) => setter(e.target.checked)}
-                  className="h-4 w-4 rounded accent-[#e9779d]"
-                />
-                <span>{label}</span>
-              </label>
-            ))}
-          </div>
-          <button
-            type="submit"
-            disabled={screeningBusy}
-            className="mt-4 w-full rounded-full bg-[#8f75b4] py-3 text-xs font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
-          >
-            {screeningBusy ? 'Evaluating with SITA...' : 'Submit Screening to SITA'}
-          </button>
-        </form>
-      </Modal>
-
-      {/* Symptom Triage Modal */}
-      <Modal isOpen={triageOpen} onClose={() => setTriageOpen(false)} title="Symptom Triage Assessment">
-        <form onSubmit={handleTriageSubmit} className="space-y-4">
-          <label className="block text-xs font-bold text-[#6f576a]">
-            What symptom are you experiencing?
-            <input
-              type="text"
-              required
-              value={triageSymptom}
-              onChange={(e) => setTriageSymptom(e.target.value)}
-              className="sita-input mt-2"
-            />
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block text-xs font-bold text-[#6f576a]">
-              Duration (days)
-              <input
-                type="number"
-                min="1"
-                max="90"
-                value={triageDuration}
-                onChange={(e) => setTriageDuration(Number(e.target.value))}
-                className="sita-input mt-2"
-              />
-            </label>
-            <div>
-              <span className="block text-xs font-bold text-[#6f576a]">Severity</span>
-              <select
-                value={triageSeverity}
-                onChange={(e) => setTriageSeverity(e.target.value as any)}
-                className="sita-input mt-2"
-              >
-                <option value="mild">Mild</option>
-                <option value="moderate">Moderate</option>
-                <option value="severe">Severe</option>
-              </select>
-            </div>
-          </div>
-          <div className="space-y-2 pt-2">
-            <p className="text-xs font-bold text-[#c75d7e]">Red-flag check (Check if applicable):</p>
-            {[
-              ['Fever above 100.4°F / 38°C', triageFever, setTriageFever],
-              ['Extremely heavy bleeding (soaking >2 pads/hr)', triageBleeding, setTriageBleeding],
-              ['Severe sharp or escalating pain', triagePain, setTriagePain],
-            ].map(([label, val, setter]: any) => (
-              <label key={label} className="flex items-center gap-3 rounded-xl border border-[#ffe0e6] bg-[#fff7f9] p-3 text-xs text-[#784d5c] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={val}
-                  onChange={(e) => setter(e.target.checked)}
-                  className="h-4 w-4 rounded accent-[#d3547b]"
-                />
-                <span>{label}</span>
-              </label>
-            ))}
-          </div>
-          <button
-            type="submit"
-            disabled={screeningBusy}
-            className="mt-4 w-full rounded-full bg-[#8f75b4] py-3 text-xs font-bold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
-          >
-            {screeningBusy ? 'Analyzing...' : 'Run Triage Evaluation'}
-          </button>
-        </form>
-      </Modal>
-    
-      {/* Medical Record Review Modal */}
-      <Modal isOpen={!!extractedData} onClose={() => setExtractedData(null)} title="Review Medical Record">
-        {extractedData && (
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              try {
-                await addMedicalRecord({
-                  title: extractedData.structured_data.title || 'Untitled Record',
-                  document_type: extractedData.structured_data.document_type || 'Unknown',
-                  document_date: extractedData.structured_data.document_date || new Date().toISOString().split('T')[0],
-                  extracted_text: extractedData.extracted_text,
-                  structured_data: extractedData.structured_data
-                });
-                setExtractedData(null);
-                // Optionally auto-send a message
-                sendMessage("I just uploaded a new medical record: " + extractedData.structured_data.title);
-              } catch (err) {
-                alert('Failed to save record.');
-              }
-            }}
-            className="space-y-4"
-          >
-            <p className="text-xs text-[#8c7487]">
-              Please review the extracted information before saving. You can edit any incorrect details.
-            </p>
-            
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-widest text-[#765f71]">Title</label>
-              <input 
-                className="mt-1 w-full rounded-xl border border-[#f0e2e8] bg-[#fcf9fb] p-3 text-sm text-[#4d394e]"
-                value={extractedData.structured_data.title || ''}
-                onChange={e => setExtractedData({...extractedData, structured_data: {...extractedData.structured_data, title: e.target.value}})}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-widest text-[#765f71]">Type</label>
-                <input 
-                  className="mt-1 w-full rounded-xl border border-[#f0e2e8] bg-[#fcf9fb] p-3 text-sm text-[#4d394e]"
-                  value={extractedData.structured_data.document_type || ''}
-                  onChange={e => setExtractedData({...extractedData, structured_data: {...extractedData.structured_data, document_type: e.target.value}})}
-                />
-              </div>
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-widest text-[#765f71]">Date</label>
-                <input 
-                  type="date"
-                  className="mt-1 w-full rounded-xl border border-[#f0e2e8] bg-[#fcf9fb] p-3 text-sm text-[#4d394e]"
-                  value={extractedData.structured_data.document_date || ''}
-                  onChange={e => setExtractedData({...extractedData, structured_data: {...extractedData.structured_data, document_date: e.target.value}})}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-widest text-[#765f71]">Doctor/Provider</label>
-              <input 
-                className="mt-1 w-full rounded-xl border border-[#f0e2e8] bg-[#fcf9fb] p-3 text-sm text-[#4d394e]"
-                value={extractedData.structured_data.doctor_name || ''}
-                onChange={e => setExtractedData({...extractedData, structured_data: {...extractedData.structured_data, doctor_name: e.target.value}})}
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-widest text-[#765f71]">Medicines</label>
-              <textarea 
-                className="mt-1 w-full rounded-xl border border-[#f0e2e8] bg-[#fcf9fb] p-3 text-sm text-[#4d394e] min-h-[60px]"
-                value={(extractedData.structured_data.medicines || []).join(', ')}
-                onChange={e => setExtractedData({...extractedData, structured_data: {...extractedData.structured_data, medicines: e.target.value.split(',').map((s) => s.trim())}})}
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-widest text-[#765f71]">Notes / Other findings</label>
-              <textarea 
-                className="mt-1 w-full rounded-xl border border-[#f0e2e8] bg-[#fcf9fb] p-3 text-sm text-[#4d394e] min-h-[80px]"
-                value={extractedData.structured_data.notes || ''}
-                onChange={e => setExtractedData({...extractedData, structured_data: {...extractedData.structured_data, notes: e.target.value}})}
-              />
-            </div>
-
-            <div className="flex gap-3 pt-3">
-              <button
-                type="button"
-                onClick={() => setExtractedData(null)}
-                className="flex-1 rounded-full border border-[#f0e2e8] bg-white py-3 text-sm font-semibold text-[#8c7487] hover:bg-[#faf7f9]"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex-1 rounded-full bg-[#5d4662] py-3 text-sm font-semibold text-white shadow-md hover:bg-[#4a364e]"
-              >
-                Confirm & Save
-              </button>
-            </div>
-          </form>
-        )}
-      </Modal>
+      <div className="w-full flex-1 flex flex-col h-full min-h-0">
+        <SitaChatInterface
+          initialPrompt={initialPrompt}
+          initialPcos={initialPcos}
+          initialTriage={initialTriage}
+        />
+      </div>
     </AppShell>
   );
 }

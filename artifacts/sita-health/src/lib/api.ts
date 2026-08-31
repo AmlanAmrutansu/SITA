@@ -124,7 +124,11 @@ export const api = {
   remove: (table: string, id: string) => request<void>(`/data/${table}/${id}`, { method: 'DELETE' }),
   removeByDate: (table: string, date: string) =>
     request<void>(`/data/${table}/by-date/${date}`, { method: 'DELETE' }),
-  chat: (text: string, assessmentId?: string) => request<{ reply: string }>('/chat', { method: 'POST', body: JSON.stringify({ text, assessmentId }) }),
+  chat: (text: string, assessmentId?: string, imageBase64?: string) =>
+    request<{ reply: string; extracted_document?: any }>('/chat', {
+      method: 'POST',
+      body: JSON.stringify({ text, assessmentId, imageBase64 }),
+    }),
   chatHistory: () => request<{ messages: any[] }>('/chat/history'),
   clearChatHistory: () => request<{ message: string }>('/chat/history', { method: 'DELETE' }),
   pcosScreening: (input: PCOSScreeningInput) =>
@@ -139,4 +143,18 @@ export const api = {
     }),
   exportDataUrl: () => '/api/data-export',
   purgeAccountData: () => request<{ message: string }>('/data-purge', { method: 'DELETE' }),
+  extractMedicalRecord: (imageBase64?: string, rawText?: string, documentTypeHint?: string) =>
+    request<{ success: boolean; extracted_text: string; structured_data: any }>('/extract-medical-record', {
+      method: 'POST',
+      body: JSON.stringify({ imageBase64, rawText, documentTypeHint }),
+    }),
+  compareMedicalRecords: (currentRecord: any, previousRecords?: any[]) =>
+    request<{ success: boolean; comparison: any }>('/medical-records/compare', {
+      method: 'POST',
+      body: JSON.stringify({ currentRecord, previousRecords }),
+    }),
+  generateDoctorSummary: () =>
+    request<{ success: boolean; summaryReport: any }>('/medical-records/doctor-summary', {
+      method: 'POST',
+    }),
 };

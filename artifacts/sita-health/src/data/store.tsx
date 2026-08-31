@@ -46,21 +46,97 @@ export interface PostpartumData {
   notes?: string;
 }
 
+export interface StructuredMedication {
+  name: string;
+  dosage?: string;
+  frequency?: string;
+  duration?: string;
+  instructions?: string;
+  start_date?: string;
+  end_date?: string;
+  is_active?: boolean;
+}
+
+export interface StructuredLabResult {
+  test_name: string;
+  value: string;
+  numeric_value?: number | null;
+  unit?: string;
+  reference_range?: string;
+  flag?: 'normal' | 'low' | 'high' | 'abnormal' | 'borderline' | null;
+  recorded_at?: string;
+}
+
+export interface StructuredMedicalRecord {
+  title: string;
+  document_type: string;
+  document_date: string;
+  doctor_name?: string | null;
+  hospital_name?: string | null;
+  diagnoses?: string[];
+  symptoms?: string[];
+  medications?: StructuredMedication[];
+  medicines?: string[];
+  investigations?: string[];
+  lab_results?: StructuredLabResult[];
+  important_findings?: string[];
+  notes?: string;
+  confidence?: 'high' | 'medium' | 'low';
+}
 
 export interface MedicalRecord {
   id?: string;
   title: string;
   document_type: string;
   document_date?: string;
+  doctor_name?: string;
+  hospital_name?: string;
   extracted_text?: string;
-  structured_data: {
-    doctor_name?: string;
-    medicines?: string[];
-    diagnoses?: string[];
-    tests?: string[];
-    notes?: string;
-  };
+  verification_status?: 'pending_verification' | 'verified' | 'edited';
+  structured_data: StructuredMedicalRecord;
+  tags?: string[];
   created_at?: string;
+}
+
+export interface MedicalRecordComparison {
+  targetRecordTitle: string;
+  targetRecordDate: string;
+  previousRecordTitle?: string;
+  previousRecordDate?: string;
+  hasPreviousComparison: boolean;
+  medicationChanges: {
+    added: StructuredMedication[];
+    removed: StructuredMedication[];
+    dosageChanged: {
+      name: string;
+      previousDosage?: string;
+      currentDosage?: string;
+      previousFrequency?: string;
+      currentFrequency?: string;
+      note?: string;
+    }[];
+    unchanged: StructuredMedication[];
+  };
+  labChanges: {
+    test_name: string;
+    previous_value: string;
+    current_value: string;
+    previous_numeric?: number | null;
+    current_numeric?: number | null;
+    delta?: number | null;
+    unit?: string;
+    reference_range?: string;
+    trend: 'increased' | 'decreased' | 'stable' | 'changed';
+    clinical_note?: string;
+  }[];
+  newDiagnoses: string[];
+  newFindings: string[];
+  symptomUpdates: {
+    newSymptoms: string[];
+    resolvedSymptoms: string[];
+  };
+  neutralSummary: string;
+  askSitaPrompt: string;
 }
 
 interface SitaStore {
@@ -85,14 +161,18 @@ interface SitaStore {
   addAppointment: (app: { title: string; date: string; doctor?: string; notes?: string }) => Promise<void>;
 
   medicalRecords: MedicalRecord[];
-  addMedicalRecord: (record: Omit<MedicalRecord, 'id'>) => Promise<void>;
+  addMedicalRecord: (record: Omit<MedicalRecord, 'id'>) => Promise<MedicalRecord>;
+  updateMedicalRecord: (id: string, patch: Partial<MedicalRecord>) => Promise<void>;
   deleteMedicalRecord: (id: string) => Promise<void>;
+  extractDocument: (imageBase64?: string, rawText?: string, docType?: string) => Promise<{ success: boolean; extracted_text: string; structured_data: StructuredMedicalRecord }>;
+  getRecordComparison: (targetRecord?: MedicalRecord, compareWithRecord?: MedicalRecord) => Promise<MedicalRecordComparison>;
+  getDoctorSummary: () => Promise<any>;
 
   postpartumData: PostpartumData;
   updatePostpartumData: (patch: Partial<PostpartumData>) => Promise<void>;
   recordKegel: () => Promise<void>;
   messages: ChatMessage[];
-  sendMessage: (text: string, assessmentId?: string) => Promise<void>;
+  sendMessage: (text: string, assessmentId?: string, imageBase64?: string) => Promise<void>;
   clearMessages: () => Promise<void>;
   runPCOSScreening: (input: PCOSScreeningInput) => Promise<{ result: PCOSScreeningResult; explanation: string; id?: string }>;
   runSymptomTriage: (input: SymptomTriageInput) => Promise<{ result: SymptomTriageResult; explanation: string; id?: string }>;
@@ -138,6 +218,85 @@ const welcomeChat: ChatMessage[] = [
   },
 ];
 
+// Seed initial verified clinical examples for rich Health Memory onboarding
+const sampleMedicalRecords: MedicalRecord[] = [
+  {
+    id: 'sample-doc-2',
+    title: 'Dr. Ananya Roy - Follow-up Lab & Prescription',
+    document_type: 'Prescription',
+    document_date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    doctor_name: 'Dr. Ananya Roy, MD (OB/GYN)',
+    hospital_name: 'Apollo Women Care',
+    extracted_text: 'Rx: Ferrous Ascorbate 100mg BD (increased dose for ferritin optimization), Calcium+Vit D3 500mg BD, Omega-3 DHA 200mg OD. Lab: Hb 10.4 g/dL, Ferritin 24 ng/mL, TSH 1.85 mIU/L.',
+    verification_status: 'verified',
+    structured_data: {
+      title: 'Dr. Ananya Roy - Follow-up Lab & Prescription',
+      document_type: 'Prescription',
+      document_date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      doctor_name: 'Dr. Ananya Roy, MD (OB/GYN)',
+      hospital_name: 'Apollo Women Care',
+      diagnoses: ['Gestational Support', 'Improving Iron Stores'],
+      symptoms: ['Mild fatigue on exertion', 'Leg cramps (mild)'],
+      medications: [
+        { name: 'Ferrous Ascorbate', dosage: '100mg', frequency: 'Twice daily after meals', duration: '30 days', instructions: 'Take with lemon water or orange juice; avoid taking with milk' },
+        { name: 'Calcium + Vitamin D3', dosage: '500mg', frequency: 'Twice daily', duration: '60 days', instructions: 'Keep 2-hour gap from iron tablet' },
+        { name: 'Omega-3 DHA', dosage: '200mg', frequency: 'Once daily with dinner', duration: '60 days' },
+      ],
+      investigations: ['Fetal Anatomy Ultrasound Scan at 20 weeks', 'Repeat CBC in 4 weeks'],
+      lab_results: [
+        { test_name: 'Hemoglobin', value: '10.4', numeric_value: 10.4, unit: 'g/dL', reference_range: '12.0 - 15.5 g/dL', flag: 'low' },
+        { test_name: 'Serum Ferritin', value: '24', numeric_value: 24, unit: 'ng/mL', reference_range: '20 - 200 ng/mL', flag: 'normal' },
+        { test_name: 'TSH', value: '1.85', numeric_value: 1.85, unit: 'mIU/L', reference_range: '0.4 - 4.0 mIU/L', flag: 'normal' },
+      ],
+      important_findings: [
+        'Ferritin improved from baseline 18 ng/mL to 24 ng/mL with iron therapy',
+        'TSH is optimal at 1.85 mIU/L for gestational metabolic health',
+        'Fetal heart sounds clear and rhythmic at 144 bpm',
+      ],
+      notes: 'Continue adequate hydration (min 2.5L). Book anomaly ultrasound scan for 20th week.',
+      confidence: 'high',
+    },
+    created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'sample-doc-1',
+    title: 'Dr. Ananya Roy - Initial Prenatal Prescription & Baseline Labs',
+    document_type: 'Prescription',
+    document_date: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    doctor_name: 'Dr. Ananya Roy, MD (OB/GYN)',
+    hospital_name: 'Apollo Women Care',
+    extracted_text: 'Rx: Ferrous Ascorbate 100mg OD, Calcium+Vit D3 500mg BD, Folate 5mg OD. Lab: Hb 11.2 g/dL, Ferritin 18 ng/mL, Fasting Sugar 84 mg/dL.',
+    verification_status: 'verified',
+    structured_data: {
+      title: 'Dr. Ananya Roy - Initial Prenatal Prescription & Baseline Labs',
+      document_type: 'Prescription',
+      document_date: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      doctor_name: 'Dr. Ananya Roy, MD (OB/GYN)',
+      hospital_name: 'Apollo Women Care',
+      diagnoses: ['Gestational Anemia (Mild)', 'Routine 1st Trimester Baseline'],
+      symptoms: ['Morning nausea', 'Fatigue'],
+      medications: [
+        { name: 'Ferrous Ascorbate', dosage: '100mg', frequency: 'Once daily after lunch', duration: '30 days', instructions: 'Take after food' },
+        { name: 'Calcium + Vitamin D3', dosage: '500mg', frequency: 'Twice daily', duration: '60 days' },
+        { name: 'Folate / Methylfolate', dosage: '5mg', frequency: 'Once daily morning', duration: '30 days' },
+      ],
+      investigations: ['Baseline Blood Profile', 'Urine Routine'],
+      lab_results: [
+        { test_name: 'Hemoglobin', value: '11.2', numeric_value: 11.2, unit: 'g/dL', reference_range: '12.0 - 15.5 g/dL', flag: 'low' },
+        { test_name: 'Serum Ferritin', value: '18', numeric_value: 18, unit: 'ng/mL', reference_range: '20 - 200 ng/mL', flag: 'low' },
+        { test_name: 'Fasting Blood Sugar', value: '84', numeric_value: 84, unit: 'mg/dL', reference_range: '70 - 99 mg/dL', flag: 'normal' },
+      ],
+      important_findings: [
+        'Baseline Ferritin 18 ng/mL indicates mild iron deficiency pattern',
+        'Normal blood pressure at 116/74 mmHg',
+      ],
+      notes: 'Initial antenatal screening completed. Start mild iron supplementation.',
+      confidence: 'high',
+    },
+    created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+];
+
 export function SitaStoreProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [mode, setModeState] = useState<ReproductiveMode>('not-pregnant');
@@ -177,6 +336,7 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
         pregData,
         postData,
         chatData,
+        docData,
         recordsData,
       ] = await Promise.all([
         api.profile().catch(() => null),
@@ -186,11 +346,25 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
         api.list<any>('pregnancy_data', 'id.desc', 1).catch(() => []),
         api.list<any>('postpartum_data', 'id.desc', 1).catch(() => []),
         api.list<any>('chat_messages', 'created_at.asc', 50).catch(() => []),
+        api.list<any>('medical_documents', 'document_date.desc', 50).catch(() => []),
         api.list<any>('medical_records', 'document_date.desc', 50).catch(() => []),
       ]);
 
       if (profileData) {
-        setProfile(profileData);
+        const hasExistingHealthHistory =
+          profileData.onboarding_complete ||
+          Boolean(profileData.last_period_date) ||
+          Boolean(profileData.typical_cycle_length) ||
+          (cyclesData && cyclesData.length > 0) ||
+          (moodsData && moodsData.length > 0) ||
+          (symptomsData && symptomsData.length > 0) ||
+          (pregData && pregData.length > 0) ||
+          (postData && postData.length > 0);
+
+        setProfile({
+          ...profileData,
+          onboarding_complete: Boolean(hasExistingHealthHistory),
+        });
         if (profileData.reproductive_mode) setModeState(profileData.reproductive_mode);
         if (profileData.privacy_enabled !== undefined) setPrivacyState(profileData.privacy_enabled);
         if (profileData.notification_preferences?.daily !== undefined) {
@@ -249,16 +423,20 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
             role: item.role === 'assistant' ? 'sita' : 'user',
             text: item.content,
             time: new Date(item.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+            image: item.metadata?.image_preview,
+            extracted_document: item.metadata?.extracted_document,
           }))
         );
       }
+
+      const mergedDocs = (docData && docData.length > 0) ? docData : (recordsData && recordsData.length > 0 ? recordsData : []);
+      setMedicalRecords(mergedDocs);
     } catch (err) {
       console.warn('[SITA Store] Load issue:', err);
     } finally {
       setLoading(false);
     }
   }, []);
-
 
   useEffect(() => {
     let mounted = true;
@@ -284,6 +462,9 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       if (session?.user) {
+        if (event === 'SIGNED_IN') {
+          setLoading(true);
+        }
         setSignedIn(true);
         setUser(session.user);
         if (event === 'SIGNED_IN') {
@@ -303,28 +484,228 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
     };
   }, [refreshAll]);
 
+  const addMedicalRecord = async (record: Omit<MedicalRecord, 'id'>): Promise<MedicalRecord> => {
+    let savedRecord: MedicalRecord = {
+      ...record,
+      id: `doc-${Date.now()}`,
+      created_at: new Date().toISOString(),
+    };
 
+    if (signedIn) {
+      try {
+        // Try saving to medical_documents first, fallback to medical_records
+        const res = await api.insert<any>('medical_documents', {
+          title: record.title,
+          document_type: record.document_type,
+          document_date: record.document_date || new Date().toISOString().split('T')[0],
+          doctor_name: record.doctor_name || record.structured_data?.doctor_name,
+          hospital_name: record.hospital_name || record.structured_data?.hospital_name,
+          extracted_text: record.extracted_text,
+          verification_status: record.verification_status || 'verified',
+          structured_data: record.structured_data,
+        }).catch(async () => {
+          return api.insert<any>('medical_records', {
+            title: record.title,
+            document_type: record.document_type,
+            document_date: record.document_date || new Date().toISOString().split('T')[0],
+            extracted_text: record.extracted_text,
+            structured_data: record.structured_data,
+          });
+        });
 
-  const addMedicalRecord = async (record: Omit<MedicalRecord, 'id'>) => {
-    try {
-      const data = await api.insert('medical_records', record);
-      if (data && data.length > 0) {
-        setMedicalRecords((prev) => [data[0], ...prev]);
+        if (res && res.length > 0) {
+          savedRecord = res[0];
+        }
+      } catch (e) {
+        console.error('Failed to persist medical record to database', e);
       }
-    } catch (e) {
-      console.error('Failed to add medical record', e);
-      throw e;
     }
+
+    setMedicalRecords((prev) => [savedRecord, ...prev]);
+    return savedRecord;
+  };
+
+  const updateMedicalRecord = async (id: string, patch: Partial<MedicalRecord>) => {
+    if (signedIn && !id.startsWith('doc-') && !id.startsWith('sample-')) {
+      try {
+        await api.update('medical_documents', id, patch as any).catch(async () => {
+          await api.update('medical_records', id, patch as any);
+        });
+      } catch (e) {
+        console.error('Failed to update medical record', e);
+      }
+    }
+    setMedicalRecords((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ...patch } : r))
+    );
   };
 
   const deleteMedicalRecord = async (id: string) => {
-    try {
-      await api.remove('medical_records', id);
-      setMedicalRecords((prev) => prev.filter((r) => r.id !== id));
-    } catch (e) {
-      console.error('Failed to delete medical record', e);
-      throw e;
+    if (signedIn && !id.startsWith('doc-') && !id.startsWith('sample-')) {
+      try {
+        await api.remove('medical_documents', id).catch(async () => {
+          await api.remove('medical_records', id);
+        });
+      } catch (e) {
+        console.error('Failed to delete medical record', e);
+      }
     }
+    setMedicalRecords((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const extractDocument = async (imageBase64?: string, rawText?: string, docType?: string) => {
+    return api.extractMedicalRecord(imageBase64, rawText, docType);
+  };
+
+  const getRecordComparison = async (targetRecord?: MedicalRecord, compareWithRecord?: MedicalRecord): Promise<MedicalRecordComparison> => {
+    const target = targetRecord || medicalRecords[0];
+    if (!target) {
+      throw new Error("No record available to compare.");
+    }
+
+    const history = compareWithRecord
+      ? [compareWithRecord]
+      : medicalRecords.filter((r) => r.id !== target.id);
+
+    try {
+      const res = await api.compareMedicalRecords(target, history);
+      if (res.success && res.comparison) {
+        return res.comparison;
+      }
+    } catch (e) {
+      console.warn("[Local Comparison Fallback]:", e);
+    }
+
+    // Client-side comparison fallback
+    const targetData = target.structured_data || ({} as StructuredMedicalRecord);
+    const targetMeds = targetData.medications || [];
+    const targetLabs = targetData.lab_results || [];
+    const prev = history[0];
+
+    if (!prev) {
+      return {
+        targetRecordTitle: target.title,
+        targetRecordDate: target.document_date || new Date().toISOString().split('T')[0],
+        hasPreviousComparison: false,
+        medicationChanges: { added: targetMeds, removed: [], dosageChanged: [], unchanged: [] },
+        labChanges: targetLabs.map((l) => ({
+          test_name: l.test_name,
+          previous_value: 'N/A',
+          current_value: l.value,
+          trend: 'changed' as const,
+          clinical_note: 'Initial documented baseline.',
+        })),
+        newDiagnoses: targetData.diagnoses || [],
+        newFindings: targetData.important_findings || [],
+        symptomUpdates: { newSymptoms: targetData.symptoms || [], resolvedSymptoms: [] },
+        neutralSummary: `Baseline record saved to SITA Health Memory (${target.document_type} on ${target.document_date}).`,
+        askSitaPrompt: `Could you explain the medications and findings in my ${target.document_type} from ${target.document_date}?`,
+      };
+    }
+
+    const prevData = prev.structured_data || ({} as StructuredMedicalRecord);
+    const prevMeds = prevData.medications || [];
+    const prevLabs = prevData.lab_results || [];
+
+    const addedMeds = targetMeds.filter((tm) => !prevMeds.some((pm) => pm.name.toLowerCase().trim() === tm.name.toLowerCase().trim()));
+    const removedMeds = prevMeds.filter((pm) => !targetMeds.some((tm) => tm.name.toLowerCase().trim() === pm.name.toLowerCase().trim()));
+    const dosageChanged = targetMeds.filter((tm) => {
+      const match = prevMeds.find((pm) => pm.name.toLowerCase().trim() === tm.name.toLowerCase().trim());
+      return match && ((match.dosage || '').trim() !== (tm.dosage || '').trim() || (match.frequency || '').trim() !== (tm.frequency || '').trim());
+    }).map((tm) => {
+      const match = prevMeds.find((pm) => pm.name.toLowerCase().trim() === tm.name.toLowerCase().trim())!;
+      return {
+        name: tm.name,
+        previousDosage: match.dosage,
+        currentDosage: tm.dosage,
+        previousFrequency: match.frequency,
+        currentFrequency: tm.frequency,
+        note: 'Dosage or schedule adjusted',
+      };
+    });
+
+    const labChanges = targetLabs.map((tl) => {
+      const match = prevLabs.find((pl) => pl.test_name.toLowerCase().trim() === tl.test_name.toLowerCase().trim());
+      const pNum = match ? (typeof match.numeric_value === 'number' ? match.numeric_value : parseFloat(match.value.replace(/[^0-9.-]/g, ''))) : null;
+      const cNum = typeof tl.numeric_value === 'number' ? tl.numeric_value : parseFloat(tl.value.replace(/[^0-9.-]/g, ''));
+      const delta = (match && pNum !== null && !isNaN(pNum) && !isNaN(cNum)) ? Math.round((cNum - pNum) * 100) / 100 : null;
+
+      return {
+        test_name: tl.test_name,
+        previous_value: match ? match.value : 'Not in prior report',
+        current_value: tl.value,
+        delta,
+        unit: tl.unit || '',
+        reference_range: tl.reference_range,
+        trend: (delta && delta > 0 ? 'increased' : delta && delta < 0 ? 'decreased' : 'changed') as any,
+        clinical_note: delta !== null ? `${tl.test_name} shifted by ${delta > 0 ? '+' : ''}${delta} ${tl.unit || ''}` : `${tl.test_name}: ${tl.value}`,
+      };
+    });
+
+    return {
+      targetRecordTitle: target.title,
+      targetRecordDate: target.document_date || '',
+      previousRecordTitle: prev.title,
+      previousRecordDate: prev.document_date,
+      hasPreviousComparison: true,
+      medicationChanges: {
+        added: addedMeds,
+        removed: removedMeds,
+        dosageChanged,
+        unchanged: targetMeds.filter((tm) => !addedMeds.includes(tm) && !dosageChanged.some((d) => d.name === tm.name)),
+      },
+      labChanges,
+      newDiagnoses: (targetData.diagnoses || []).filter((d) => !(prevData.diagnoses || []).includes(d)),
+      newFindings: (targetData.important_findings || []).filter((f) => !(prevData.important_findings || []).includes(f)),
+      symptomUpdates: {
+        newSymptoms: (targetData.symptoms || []).filter((s) => !(prevData.symptoms || []).includes(s)),
+        resolvedSymptoms: (prevData.symptoms || []).filter((s) => !(targetData.symptoms || []).includes(s)),
+      },
+      neutralSummary: `Comparison: ${dosageChanged.length} dosage adjustment(s), ${addedMeds.length} new medication(s), and ${labChanges.length} lab marker(s) tracked.`,
+      askSitaPrompt: `Could you explain the updates between my ${prev.title} and ${target.title}?`,
+    };
+  };
+
+  const getDoctorSummary = async () => {
+    try {
+      const res = await api.generateDoctorSummary();
+      if (res.success && res.summaryReport) {
+        return res.summaryReport;
+      }
+    } catch (e) {
+      console.warn("[Doctor Summary Fallback]:", e);
+    }
+
+    // Client-side fallback report
+    return {
+      generatedAt: new Date().toISOString(),
+      patientName: profile?.display_name || 'Patient',
+      reproductiveMode: mode,
+      reproductiveSummary: `${mode.toUpperCase()} (Cycle: ${profile?.typical_cycle_length || 28}d, Period: ${profile?.typical_period_length || 5}d)`,
+      activeMedications: medicalRecords.flatMap((r) => r.structured_data?.medications || []),
+      recentDiagnoses: Array.from(new Set(medicalRecords.flatMap((r) => r.structured_data?.diagnoses || []))),
+      recentUltrasoundAndFindings: medicalRecords.map((r) => ({
+        documentTitle: r.title,
+        documentDate: r.document_date || '',
+        findings: r.structured_data?.important_findings || [],
+      })),
+      labTrends: medicalRecords[0]?.structured_data?.lab_results?.map((l) => ({
+        testName: l.test_name,
+        latestValue: l.value,
+        latestUnit: l.unit,
+        latestDate: medicalRecords[0]?.document_date,
+        referenceRange: l.reference_range,
+      })) || [],
+      topSymptomsPast90Days: symptomLogs.slice(0, 5).map((s) => ({
+        symptom: s.symptom,
+        loggedCount: 1,
+        lastLogged: s.logged_at,
+        predominantSeverity: s.severity || 'mild',
+      })),
+      recentAssessments: [],
+      totalDocumentsInHealthMemory: medicalRecords.length,
+      disclaimer: 'This patient-generated clinical brief was synthesized from patient-verified medical records, cycle logs, and symptom tracking in SITA Health for discussion with your doctor.',
+    };
   };
 
   const updateProfile = async (patch: Partial<Profile>) => {
@@ -618,23 +999,47 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
     setPostpartumData((prev) => ({ ...prev, kegel_count: count, ...(newId && { id: newId }) }));
   };
 
-  const sendMessage = async (text: string, assessmentId?: string) => {
+  const sendMessage = async (text: string, assessmentId?: string, imageBase64?: string) => {
     const now = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     const userMsgId = `u-${Date.now()}`;
-    setMessages((prev) => [...prev, { id: userMsgId, role: 'user', text, time: now }]);
+    const userMsg: ChatMessage = {
+      id: userMsgId,
+      role: 'user',
+      text: text || (imageBase64 ? 'Uploaded medical document for review' : ''),
+      time: now,
+      image: imageBase64,
+    };
+    setMessages((prev) => [...prev, userMsg]);
 
     if (signedIn) {
       try {
-        const { reply } = await api.chat(text, assessmentId);
-        setMessages((prev) => [...prev, { id: `s-${Date.now()}`, role: 'sita', text: reply, time: now }]);
+        const { reply, extracted_document } = await api.chat(text, assessmentId, imageBase64);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `s-${Date.now()}`,
+            role: 'sita',
+            text: reply,
+            time: now,
+            extracted_document,
+          },
+        ]);
+        if (extracted_document) {
+          refreshAll();
+        }
       } catch (err: any) {
         setMessages((prev) => [
           ...prev,
           {
             id: `s-${Date.now()}`,
             role: 'sita',
-            text: err?.message || 'I could not connect to my assistant service. Please check your network or try again in a moment.',
+            text: err?.message || 'SITA could not reach the AI service right now. Please check your connection and try again.',
             time: now,
+            isError: true,
+            canRetry: true,
+            lastUserPrompt: text,
+            lastAssessmentId: assessmentId,
+            lastImageBase64: imageBase64,
           },
         ]);
       }
@@ -646,7 +1051,7 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
           {
             id: `s-${Date.now()}`,
             role: 'sita',
-            text: `Thank you for asking, ${profile?.display_name || 'friend'} 🌸. I am here to walk beside you. Remember that symptoms like cramps, fatigue, and mood shifts are signals from your body. To enable full AI intelligence with SITA, please sign in or set up your account.`,
+            text: `Thank you for reaching out, ${profile?.display_name || 'friend'} 🌸. I am here to walk beside you. Remember that symptoms like cramps, fatigue, and mood shifts are signals from your body. To enable full AI intelligence with SITA, please sign in or set up your account.`,
             time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
           },
         ]);
@@ -743,7 +1148,11 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
       exportData,
       medicalRecords,
       addMedicalRecord,
+      updateMedicalRecord,
       deleteMedicalRecord,
+      extractDocument,
+      getRecordComparison,
+      getDoctorSummary,
       purgeAccountData,
       refreshAll,
     }),
@@ -762,6 +1171,7 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
       signedIn,
       user,
       loading,
+      medicalRecords,
       refreshAll,
     ]
   );

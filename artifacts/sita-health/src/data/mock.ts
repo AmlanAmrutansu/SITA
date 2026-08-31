@@ -16,6 +16,13 @@ export interface ChatMessage {
   role: 'sita' | 'user';
   text: string;
   time: string;
+  image?: string;
+  extracted_document?: any;
+  isError?: boolean;
+  canRetry?: boolean;
+  lastUserPrompt?: string;
+  lastAssessmentId?: string;
+  lastImageBase64?: string;
 }
 
 export const moods: { label: Mood; color: string; icon: string }[] = [
@@ -36,6 +43,7 @@ export const periodDays = [17, 18, 19, 20, 21];
 export const navItems = [
   { href: '/', label: 'Home', icon: 'home' },
   { href: '/cycle', label: 'Cycle', icon: 'calendar' },
+  { href: '/records', label: 'Records', icon: 'fileText' },
   { href: '/mood', label: 'Mood', icon: 'smile' },
   { href: '/sita', label: 'SITA', icon: 'sparkles' },
   { href: '/profile', label: 'Profile', icon: 'user' },

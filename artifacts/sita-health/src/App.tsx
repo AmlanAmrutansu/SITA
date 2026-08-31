@@ -7,6 +7,7 @@ import NotFound from '@/pages/not-found';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import { SitaStoreProvider, useSitaStore } from '@/data/store';
 import { WelcomePage, AuthPage, OnboardingPage, ModePage, HomePage, CyclePage, MoodPage, InsightsPage, SitaPage, PregnancyPage, PostpartumPage, ProfilePage, HealthTimelinePage } from '@/pages/sita-pages';
+import { MedicalRecordsPage } from '@/pages/medical-records-page';
 
 const queryClient = new QueryClient();
 
@@ -18,7 +19,7 @@ function AuthGuard({ component: Component, isPublic = false }: { component: any,
     if (!loading) {
       if (!signedIn && !isPublic) {
         setLocation('/welcome');
-      } else if (signedIn && !profile?.onboarding_complete && location !== '/onboarding' && location !== '/mode') {
+      } else if (signedIn && profile && !profile.onboarding_complete && location !== '/onboarding' && location !== '/mode') {
         setLocation('/onboarding');
       } else if (signedIn && profile?.onboarding_complete && (location === '/welcome' || location === '/auth')) {
         setLocation('/');
@@ -39,7 +40,7 @@ function AuthGuard({ component: Component, isPublic = false }: { component: any,
 
   // Prevent rendering protected routes while redirecting
   if (!signedIn && !isPublic) return null;
-  if (signedIn && !profile?.onboarding_complete && location !== '/onboarding' && location !== '/mode') return null;
+  if (signedIn && profile && !profile.onboarding_complete && location !== '/onboarding' && location !== '/mode') return null;
 
   return <Component />;
 }
@@ -56,6 +57,7 @@ function Router() {
         <Route path="/mode" component={() => <AuthGuard component={ModePage} />} />
         <Route path="/" component={() => <AuthGuard component={HomePage} />} />
         <Route path="/cycle" component={() => <AuthGuard component={CyclePage} />} />
+        <Route path="/records" component={() => <AuthGuard component={MedicalRecordsPage} />} />
         <Route path="/mood" component={() => <AuthGuard component={MoodPage} />} />
         <Route path="/insights" component={() => <AuthGuard component={InsightsPage} />} />
         <Route path="/sita" component={() => <AuthGuard component={SitaPage} />} />

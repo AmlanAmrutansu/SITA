@@ -1,11 +1,11 @@
-import { Baby, Bell, CalendarDays, ChevronRight, Home, Menu, MessageCircle, Settings, Smile, Sparkles, UserRound, X } from 'lucide-react';
+import { Baby, Bell, CalendarDays, ChevronRight, FileText, Home, Menu, MessageCircle, Settings, Smile, Sparkles, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { navItems } from '@/data/mock';
 import { useSitaStore } from '@/data/store';
 
-const iconMap = { home: Home, calendar: CalendarDays, smile: Smile, sparkles: Sparkles, user: UserRound, baby: Baby };
+const iconMap = { home: Home, calendar: CalendarDays, fileText: FileText, smile: Smile, sparkles: Sparkles, user: UserRound, baby: Baby };
 
 export function OriginalSitaMark({ className = "w-10 h-10" }: { className?: string }) {
   return (
@@ -89,17 +89,17 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link href="/sita" className="mt-3 flex items-center text-[11px] font-bold text-[#8467a2]" data-testid="link-sidebar-sita">Talk to SITA <ChevronRight className="ml-1 h-3 w-3" /></Link>
         </div>
       </aside>
-      <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 flex h-[70px] items-center justify-between border-b border-[#eee2e7]/80 bg-[#fffafa]/78 px-5 backdrop-blur-xl md:px-9">
+      <div className="min-w-0 flex-1 flex flex-col">
+        <header className="sticky top-0 z-30 flex h-[70px] shrink-0 items-center justify-between border-b border-[#eee2e7]/80 bg-[#fffafa]/78 px-5 backdrop-blur-xl md:px-9">
           <div className="md:hidden"><SitaLogo compact /></div>
-          <div className="hidden text-sm font-semibold text-[#a08b9b] md:block">{location === '/' ? todayStr : 'Your private health space'}</div>
+          <div className="hidden text-sm font-semibold text-[#a08b9b] md:block">{location === '/' ? todayStr : location.startsWith('/sita') ? 'SITA AI Health Workspace' : 'Your private health space'}</div>
           <div className="ml-auto flex items-center gap-2.5">
             <button onClick={() => setMenuOpen(true)} className="relative grid h-10 w-10 place-items-center rounded-full bg-[#fff1f5] text-[#aa7188] transition-transform hover:scale-105" data-testid="button-notifications" aria-label="Notifications"><Bell className="h-[18px] w-[18px]" strokeWidth={1.7} /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#dc6e93]" /></button>
             <Link href="/profile" className="grid h-10 w-10 place-items-center rounded-full bg-[#e9dfef] text-xs font-bold text-[#806a98]" data-testid="link-header-profile">{userInitial}</Link>
             <button onClick={() => setMenuOpen(true)} className="grid h-10 w-10 place-items-center rounded-full text-[#8a7383] md:hidden" data-testid="button-open-menu" aria-label="Open menu"><Menu className="h-5 w-5" /></button>
           </div>
         </header>
-        <main className="app-content px-4 pb-28 pt-7 sm:px-6 md:px-9 md:pb-12 md:pt-9">{children}</main>
+        <main className={location.startsWith('/sita') ? "w-full min-h-0 flex-1 flex flex-col p-2 sm:p-4 md:p-6 pb-24 md:pb-6 max-w-[1600px] mx-auto h-[calc(100dvh-70px)]" : "app-content px-4 pb-28 pt-7 sm:px-6 md:px-9 md:pb-12 md:pt-9"}>{children}</main>
       </div>
       
       {/* Liquid Glass Bottom Navigation (Mobile) */}
