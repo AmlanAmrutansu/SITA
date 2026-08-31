@@ -1,9 +1,8 @@
 import { Router, type IRouter, type Request } from "express";
 import { responseJson, supabaseRequest } from "../lib/supabase";
 import { evaluatePCOS, evaluateSymptomTriage, type PCOSScreeningInput, type SymptomTriageInput } from "../lib/screening";
-import { generateSitaResponse } from "../lib/ai-service";
+import { generateSitaResponse, extractStructuredMedicalDocument } from "../lib/ai-service";
 import { randomUUID } from "node:crypto";
-import { createWorker } from "tesseract.js";
 
 const router: IRouter = Router();
 
@@ -40,97 +39,65 @@ router.post("/chat", async (req: Request, res: any): Promise<void> => {
 
   try {
     let extractedDoc: any = null;
-    let imageOcrText = "";
 
-    // If an image was attached, perform OCR and medical extraction
+    // If an image was attached, perform multimodal vision medical extraction
     if (imageBase64) {
       try {
-        const worker = await createWorker("eng");
-        const ret = await worker.recognize(imageBase64);
-        imageOcrText = ret.data.text.trim();
-        await worker.terminate();
+        const extraction = await extractStructuredMedicalDocument(imageBase64, text);
+        if (extraction && extraction.structured_data) {
+          extractedDoc = {
+            extracted_text: extraction.extracted_text,
+            structured_data: extraction.structured_data,
+            requires_confirmation: false,
+            is_saved: true,
+          };
 
-        if (imageOcrText && imageOcrText.length > 5) {
-          const extractionPrompt = `You are SITA's specialized Clinical Medical Document Extraction Assistant.
-Analyze the following raw OCR text extracted from a medical record, prescription, or lab report.
-Extract structured data and return strictly a valid JSON object matching the schema below.
-CRITICAL RULES:
-- Never hallucinate or invent medications or test values not present in the text.
-- If a value cannot be determined, set it to null or leave the list empty.
-- Normalize medication frequency (e.g. "Once daily", "Twice daily", "At bedtime").
-- Return ONLY the raw JSON object, without markdown wrapping.
-
-JSON Schema:
-{
-  "title": "string (Concise title e.g. 'Prescription - Dr. Mehta' or 'Blood Lab Report')",
-  "document_type": "Prescription | Lab Report | Ultrasound Report | Doctor Note | Discharge Summary | Blood Report | Other",
-  "document_date": "YYYY-MM-DD (format if identifiable, else current date string)",
-  "doctor_name": "string | null",
-  "hospital_name": "string | null",
-  "diagnoses": ["string"],
-  "symptoms": ["string"],
-  "medications": [
-    {
-      "name": "string",
-      "dosage": "string (e.g. '500mg', '100mcg')",
-      "frequency": "string (e.g. 'Once daily after breakfast', 'Twice daily')",
-      "duration": "string (e.g. '14 days', '1 month')",
-      "instructions": "string (e.g. 'Take with warm water')"
-    }
-  ],
-  "investigations": ["string"],
-  "lab_results": [
-    {
-      "test_name": "string",
-      "value": "string",
-      "numeric_value": "number | null",
-      "unit": "string",
-      "reference_range": "string",
-      "flag": "normal | low | high | abnormal | borderline | null"
-    }
-  ],
-  "important_findings": ["string"],
-  "notes": "string",
-  "confidence": "high | medium | low"
-}
-
-Raw Document Text:
-${imageOcrText}`;
-
+          // Automatically persist to Supabase medical records table under user.id
           try {
-            const jsonString = await generateSitaResponse(extractionPrompt, [
-              { role: "user", parts: [{ text: "Extract medical JSON." }] },
-            ]);
-            const cleaned = jsonString.replace(/```json/g, "").replace(/```/g, "").trim();
-            const parsed = JSON.parse(cleaned);
-            extractedDoc = {
-              extracted_text: imageOcrText,
-              structured_data: parsed,
-              requires_confirmation: true,
+            const savePayload = {
+              user_id: user.id,
+              title: extraction.structured_data.title || "Uploaded Medical Document",
+              document_type: extraction.structured_data.document_type || "Medical Record",
+              document_date: extraction.structured_data.document_date || new Date().toISOString().split("T")[0],
+              doctor_name: extraction.structured_data.doctor_name || null,
+              hospital_name: extraction.structured_data.hospital_name || null,
+              extracted_text: extraction.extracted_text || "",
+              structured_data: extraction.structured_data,
+              verification_status: "verified",
             };
-          } catch (pErr) {
-            console.warn("[Document structuring fallback]:", pErr);
-            extractedDoc = {
-              extracted_text: imageOcrText,
-              structured_data: {
-                title: "Uploaded Medical Document",
-                document_type: "Medical Record",
-                document_date: new Date().toISOString().split("T")[0],
-                diagnoses: [],
-                symptoms: [],
-                medications: [],
-                investigations: [],
-                lab_results: [],
-                important_findings: [],
-                notes: imageOcrText.slice(0, 300),
-                confidence: "medium",
+
+            const insertRes = await supabaseRequest(
+              "/rest/v1/medical_documents",
+              {
+                method: "POST",
+                headers: { Prefer: "return=representation" },
+                body: JSON.stringify(savePayload),
               },
-              requires_confirmation: true,
-            };
+              token
+            ).catch(async () => {
+              return supabaseRequest(
+                "/rest/v1/medical_records",
+                {
+                  method: "POST",
+                  headers: { Prefer: "return=representation" },
+                  body: JSON.stringify(savePayload),
+                },
+                token
+              );
+            });
+
+            if (insertRes && insertRes.ok) {
+              const savedRecord = (await responseJson(insertRes))?.[0];
+              if (savedRecord?.id) {
+                extractedDoc.id = savedRecord.id;
+              }
+            }
+          } catch (saveErr) {
+            console.warn("[Auto-persist medical record to Supabase]:", saveErr);
           }
         }
-      } catch (ocrErr) {
-        console.warn("[OCR extraction failed]:", ocrErr);
+      } catch (extractErr) {
+        console.warn("[Multimodal extraction pipeline error]:", extractErr);
       }
     }
 
@@ -238,7 +205,16 @@ ${imageOcrText}`;
     }
 
     if (extractedDoc) {
-      userContext += `\n\n[NEW IMAGE / MEDICAL DOCUMENT ATTACHED IN THIS MESSAGE]:\nThe user has uploaded an image of a medical document. Extracted details:\n${JSON.stringify(extractedDoc.structured_data, null, 2)}\nOCR Text: ${extractedDoc.extracted_text}\nExplain the findings clearly, warmly, and helpfully to the user. Inform them that an editable verification card is shown below for them to review and confirm before saving to their Health Memory.`;
+      userContext += `\n\n[NEW MEDICAL DOCUMENT / PRESCRIPTION ATTACHED IN THIS MESSAGE]:
+The user has uploaded a medical document/prescription. Extracted clinical data:
+${JSON.stringify(extractedDoc.structured_data, null, 2)}
+Document Notes / Text: ${extractedDoc.extracted_text}
+INSTRUCTIONS FOR SITA'S RESPONSE:
+1. Greet warmly and confirm you have reviewed the uploaded document ("${extractedDoc.structured_data.title}").
+2. Explain each prescribed medication clearly (what it is commonly used for, dosage schedule, and general guidance like taking with food/water).
+3. If there are lab test values or ultrasound notes, explain what the parameters represent in simple, reassuring terms without providing a rigid diagnosis.
+4. Provide 2-3 thoughtful questions the patient can ask their doctor at their next checkup.
+5. Reassure them that this document has been saved directly to their SITA Health Memory for future reference.`;
     }
 
     if (specificScreening) {
@@ -264,7 +240,7 @@ ${userContext}`;
     );
     const history = messagesResponse.ok ? await responseJson(messagesResponse) : [];
 
-    const effectiveUserContent = text || (extractedDoc ? "I have attached an image of a medical document. Please review it." : "Attached image.");
+    const effectiveUserContent = text || (extractedDoc ? "I have uploaded an image of a medical document/prescription. Please review and explain it." : "Uploaded document image.");
 
     const contents = [...(history || []), { role: "user", content: effectiveUserContent }].map((message: any) => ({
       role: message.role === "assistant" ? "model" : "user",
@@ -274,7 +250,7 @@ ${userContext}`;
     const reply = await generateSitaResponse(systemInstruction, contents);
 
     // Persist user message and assistant reply to chat_messages with metadata
-    const userMsgMetadata = imageBase64 ? { has_image: true, image_preview: imageBase64.slice(0, 500) } : {};
+    const userMsgMetadata = imageBase64 ? { has_image: true, image_preview: imageBase64 } : {};
     
     await supabaseRequest(
       "/rest/v1/chat_messages",

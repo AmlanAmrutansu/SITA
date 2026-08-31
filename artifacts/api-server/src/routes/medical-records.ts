@@ -1,6 +1,5 @@
 import { Router, type Request } from "express";
-import { createWorker } from "tesseract.js";
-import { generateSitaResponse } from "../lib/ai-service";
+import { generateSitaResponse, extractStructuredMedicalDocument, type StructuredMedicalRecord, type StructuredMedication, type StructuredLabResult } from "../lib/ai-service";
 import { responseJson, supabaseRequest } from "../lib/supabase";
 
 const router = Router();
@@ -16,42 +15,7 @@ async function getAuthenticatedUser(token: string) {
   return responseJson(userResponse);
 }
 
-export interface StructuredMedication {
-  name: string;
-  dosage?: string;
-  frequency?: string;
-  duration?: string;
-  instructions?: string;
-  start_date?: string;
-  end_date?: string;
-  is_active?: boolean;
-}
-
-export interface StructuredLabResult {
-  test_name: string;
-  value: string;
-  numeric_value?: number | null;
-  unit?: string;
-  reference_range?: string;
-  flag?: "normal" | "low" | "high" | "abnormal" | "borderline" | null;
-  recorded_at?: string;
-}
-
-export interface StructuredMedicalRecord {
-  title: string;
-  document_type: string;
-  document_date: string;
-  doctor_name?: string | null;
-  hospital_name?: string | null;
-  diagnoses: string[];
-  symptoms: string[];
-  medications: StructuredMedication[];
-  investigations: string[];
-  lab_results: StructuredLabResult[];
-  important_findings: string[];
-  notes?: string;
-  confidence?: "high" | "medium" | "low";
-}
+export type { StructuredMedication, StructuredLabResult, StructuredMedicalRecord };
 
 export interface MedicalRecordComparison {
   targetRecordTitle: string;
@@ -311,11 +275,11 @@ export function compareMedicalRecords(
   };
 }
 
-// 1. OCR + Groq Structured Medical Extraction Endpoint
+// 1. Multimodal / OCR + Groq Structured Medical Extraction Endpoint
 router.post("/extract-medical-record", async (req: Request, res: any): Promise<void> => {
   try {
     const { imageBase64, rawText, documentTypeHint } = req.body;
-    let text = rawText ? String(rawText).trim() : "";
+    const text = rawText ? String(rawText).trim() : "";
 
     if (!text && !imageBase64) {
       return res.status(400).json({
@@ -325,113 +289,16 @@ router.post("/extract-medical-record", async (req: Request, res: any): Promise<v
       });
     }
 
-    // 1. OCR with Tesseract if image provided
-    if (!text && imageBase64) {
-      try {
-        const worker = await createWorker("eng");
-        const ret = await worker.recognize(imageBase64);
-        text = ret.data.text;
-        await worker.terminate();
-      } catch (ocrErr: any) {
-        console.warn("[OCR Error]:", ocrErr);
-        return res.status(400).json({
-          success: false,
-          code: "DOCUMENT_PROCESSING_ERROR",
-          message: "Could not read text from the image. Please ensure the photograph is clear, well-lit, and in focus.",
-        });
-      }
-    }
-
-    if (!text || text.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        code: "DOCUMENT_PROCESSING_ERROR",
-        message: "No readable medical text could be found in the provided document. Please upload a clear photo or paste the report text.",
-      });
-    }
-
-    // 2. Extract structured schema with Groq LLM
-    const prompt = `You are SITA's specialized Clinical Medical Document Extraction Assistant.
-Analyze the following raw OCR text extracted from a medical record or prescription.
-Extract the structured data and return strictly a valid JSON object matching the schema below.
-CRITICAL RULES:
-- Never hallucinate or invent medications, dosages, or numbers that are not documented in the text.
-- If a value, doctor name, hospital, or date cannot be determined with certainty, set it to null or leave the list empty.
-- Normalize medication frequency (e.g. "OD", "BD", "TDS", "Once daily", "Twice daily", "At bedtime").
-- Extract lab results with test names, raw string values, parsed numeric values, units, and reference ranges if present.
-- Extract key ultrasound, imaging, or physical examination findings.
-- Return ONLY the raw JSON object, without any wrapping markdown blocks or preamble.
-
-JSON Schema:
-{
-  "title": "string (A concise, descriptive title e.g. 'Prescription - Dr. Mehta' or 'Ultrasound Pelvis Report')",
-  "document_type": "Prescription | Lab Report | Ultrasound Report | Doctor Note | Discharge Summary | Medical Certificate | Blood Report | Imaging / Scan | Other",
-  "document_date": "YYYY-MM-DD (format if identifiable, else current date string)",
-  "doctor_name": "string | null",
-  "hospital_name": "string | null",
-  "diagnoses": ["string"],
-  "symptoms": ["string"],
-  "medications": [
-    {
-      "name": "string",
-      "dosage": "string (e.g. '500mg', '100mcg')",
-      "frequency": "string (e.g. 'Once daily after breakfast', 'BD', 'TDS')",
-      "duration": "string (e.g. '14 days', '1 month', 'Ongoing')",
-      "instructions": "string (e.g. 'Take with warm water')"
-    }
-  ],
-  "investigations": ["string (tests recommended or ordered)"],
-  "lab_results": [
-    {
-      "test_name": "string (e.g. 'Hemoglobin', 'TSH', 'Fasting Blood Glucose', 'Beta-hCG', 'Ferritin')",
-      "value": "string (e.g. '11.2', '4.2', '120/80')",
-      "numeric_value": "number | null",
-      "unit": "string (e.g. 'g/dL', 'mIU/L', 'mg/dL', 'mmHg')",
-      "reference_range": "string (e.g. '12.0 - 15.5 g/dL')",
-      "flag": "normal | low | high | abnormal | borderline | null"
-    }
-  ],
-  "important_findings": ["string (e.g. 'Single live intrauterine pregnancy at 6w3d', 'Endometrium thickness 8.2mm', 'Mild iron deficiency pattern')"],
-  "notes": "string (advice, follow up dates, dietary guidance)",
-  "confidence": "high | medium | low"
-}
-
-Document Type Hint: ${documentTypeHint || "Auto-detect"}
-
-Raw Document Text:
-${text}`;
-
-    const jsonString = await generateSitaResponse(prompt, [
-      { role: "user", parts: [{ text: "Extract medical record JSON." }] },
-    ]);
-
-    const cleaned = jsonString.replace(/```json/g, "").replace(/```/g, "").trim();
-    let structuredData: StructuredMedicalRecord;
-
-    try {
-      structuredData = JSON.parse(cleaned);
-    } catch (parseErr) {
-      console.warn("[JSON Parse Fallback]:", parseErr, cleaned);
-      // Fallback object structure
-      structuredData = {
-        title: "Medical Document",
-        document_type: "Prescription",
-        document_date: new Date().toISOString().split("T")[0],
-        diagnoses: [],
-        symptoms: [],
-        medications: [],
-        investigations: [],
-        lab_results: [],
-        important_findings: [],
-        notes: text.slice(0, 300),
-        confidence: "medium",
-      };
-    }
+    const { extracted_text, structured_data } = await extractStructuredMedicalDocument(
+      imageBase64,
+      text,
+      documentTypeHint
+    );
 
     res.json({
       success: true,
-      extracted_text: text,
-      structured_data: structuredData,
+      extracted_text,
+      structured_data,
     });
   } catch (error: any) {
     console.error("[Extraction error]:", error);
