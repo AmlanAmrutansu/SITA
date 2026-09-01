@@ -577,10 +577,25 @@ export function SitaChatInterface({ initialPrompt, initialPcos, initialTriage }:
                           </div>
                           <span className="text-xs sm:text-[13px] font-bold text-[#553b50]">Information extracted from your image</span>
                         </div>
-                        <span className="rounded-full bg-[#f4eaf2] px-3 py-1 text-[10px] font-bold text-[#864c70]">
-                          {isExtracted.structured_data?.document_type || 'Prescription / Report'}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {isExtracted.structured_data?.detected_language && isExtracted.structured_data.detected_language !== 'English' && (
+                            <span className="rounded-full bg-[#fdf2e9] border border-[#fbd7be] px-2.5 py-0.5 text-[10px] font-bold text-[#a0522d]">
+                              🇮🇳 {isExtracted.structured_data.detected_language} ({isExtracted.structured_data.detected_script || 'Native'} Script)
+                            </span>
+                          )}
+                          <span className="rounded-full bg-[#f4eaf2] px-3 py-1 text-[10px] font-bold text-[#864c70]">
+                            {isExtracted.structured_data?.document_type || 'Prescription / Report'}
+                          </span>
+                        </div>
                       </div>
+
+                      {/* Handwriting & Translation Notice */}
+                      {isExtracted.structured_data?.handwriting_notes && (
+                        <div className="rounded-xl bg-[#fff9ea] p-2.5 border border-[#fae8b4] text-xs text-[#825d18] flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 shrink-0 text-[#b5811c]" />
+                          <span>{isExtracted.structured_data.handwriting_notes}</span>
+                        </div>
+                      )}
 
                       {/* Metadata Grid */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">

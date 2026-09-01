@@ -359,7 +359,7 @@ router.post("/medical-records/doctor-summary", async (req: Request, res: any): P
     // Fetch all user longitudinal records from Supabase
     const [profileRes, recordsRes, cyclesRes, symptomsRes, pregRes, postRes, screeningRes] = await Promise.all([
       supabaseRequest("/rest/v1/profiles?select=*&limit=1", { method: "GET" }, token),
-      supabaseRequest("/rest/v1/medical_documents?select=*&order=document_date.desc&limit=20", { method: "GET" }, token),
+      supabaseRequest("/rest/v1/medical_records?select=*&order=document_date.desc&limit=20", { method: "GET" }, token),
       supabaseRequest("/rest/v1/cycle_logs?select=period_date,flow,cramps,symptoms&order=period_date.desc&limit=10", { method: "GET" }, token),
       supabaseRequest("/rest/v1/symptom_logs?select=symptom,category,severity,logged_at&order=logged_at.desc&limit=20", { method: "GET" }, token),
       supabaseRequest("/rest/v1/pregnancy_data?select=*&order=id.desc&limit=1", { method: "GET" }, token),

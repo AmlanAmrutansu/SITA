@@ -1028,12 +1028,25 @@ export function SitaStoreProvider({ children }: { children: ReactNode }) {
           refreshAll();
         }
       } catch (err: any) {
+        let displayErrorText = err?.message || 'SITA could not reach the AI service right now. Please check your connection and try again.';
+        if (err?.code === 'AI_RATE_LIMIT' || err?.status === 429) {
+          displayErrorText = 'SITA is currently experiencing high demand. Please wait a moment and click retry.';
+        } else if (err?.code === 'AUTH_EXPIRED' || err?.status === 401) {
+          displayErrorText = 'Your session has expired. Please sign in again to continue chatting with SITA.';
+        } else if (err?.code === 'AI_PROVIDER_NOT_CONFIGURED' || (err?.status === 503 && String(err?.message || '').includes('configured'))) {
+          displayErrorText = 'The AI service is not yet configured (GROQ_API_KEY). Please configure your server environment.';
+        } else if (err?.code === 'AI_UPSTREAM_BUSY' || err?.status === 503) {
+          displayErrorText = 'The AI model is momentarily busy or updating. Please click retry in a few seconds.';
+        } else if (err?.code === 'NETWORK_ERROR') {
+          displayErrorText = 'Unable to reach the SITA server. Please check your network connection and try again.';
+        }
+
         setMessages((prev) => [
           ...prev,
           {
             id: `s-${Date.now()}`,
             role: 'sita',
-            text: err?.message || 'SITA could not reach the AI service right now. Please check your connection and try again.',
+            text: displayErrorText,
             time: now,
             isError: true,
             canRetry: true,

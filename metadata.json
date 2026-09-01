@@ -1,6 +1,6 @@
 {
   "name": "SITA Health",
-  "description": "A gentle, private companion for understanding your cycle, mood, reproductive health, and longitudinal health memory.",
+  "description": "Smart Intelligence for Treatment & Awareness: An empathetic women's health companion with multilingual medical OCR and secure personal health memory.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

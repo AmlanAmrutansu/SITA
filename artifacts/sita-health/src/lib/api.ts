@@ -71,13 +71,30 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  const response = await fetch(`/api${path}`, {
-    ...init,
-    headers,
-  });
+
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, {
+      ...init,
+      headers,
+    });
+  } catch (netErr: any) {
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    const msg = isOffline
+      ? 'You appear to be offline. Please check your network connection.'
+      : (netErr?.message || 'Unable to connect to the SITA server. Please check your internet connection.');
+    const err: any = new Error(msg);
+    err.code = 'NETWORK_ERROR';
+    throw err;
+  }
+
   const data = response.status === 204 ? null : await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data?.message ?? 'Something went wrong.');
+    const err: any = new Error(data?.message ?? `Request failed with status ${response.status}`);
+    err.status = response.status;
+    err.code = data?.code;
+    err.data = data;
+    throw err;
   }
   return data as T;
 }
@@ -124,11 +141,27 @@ export const api = {
   remove: (table: string, id: string) => request<void>(`/data/${table}/${id}`, { method: 'DELETE' }),
   removeByDate: (table: string, date: string) =>
     request<void>(`/data/${table}/by-date/${date}`, { method: 'DELETE' }),
-  chat: (text: string, assessmentId?: string, imageBase64?: string) =>
-    request<{ reply: string; extracted_document?: any }>('/chat', {
-      method: 'POST',
-      body: JSON.stringify({ text, assessmentId, imageBase64 }),
-    }),
+  chat: async (text: string, assessmentId?: string, imageBase64?: string) => {
+    try {
+      console.log(`[ SITA GROQ DEBUG ]\nFrontend request: /api/chat\nHas text: ${Boolean(text)}\nHas image: ${Boolean(imageBase64)}\nHas assessmentId: ${Boolean(assessmentId)}`);
+      const res = await request<{ success?: boolean; reply?: string; response?: string; message?: string; extracted_document?: any; retrieval_meta?: any }>('/chat', {
+        method: 'POST',
+        body: JSON.stringify({ text, assessmentId, imageBase64 }),
+      });
+
+      const extractedReply = res?.reply || res?.response || res?.message || '';
+      console.log(`[ SITA GROQ DEBUG ]\nFrontend response received: true\nFrontend JSON parsed: true\nAssistant content extracted: ${Boolean(extractedReply)}\nContent length: ${extractedReply.length}\nFinal rendering: ready`);
+
+      return {
+        reply: extractedReply,
+        extracted_document: res?.extracted_document,
+        retrieval_meta: res?.retrieval_meta,
+      };
+    } catch (err: any) {
+      console.error(`[ SITA GROQ DEBUG ]\nFrontend response received: false\nExact failure stage: api.chat fetch/parsing\nError status: ${err?.status}\nError message: ${err?.message}`);
+      throw err;
+    }
+  },
   chatHistory: () => request<{ messages: any[] }>('/chat/history'),
   clearChatHistory: () => request<{ message: string }>('/chat/history', { method: 'DELETE' }),
   pcosScreening: (input: PCOSScreeningInput) =>
