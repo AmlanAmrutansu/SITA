@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request } from "express";
 import { responseJson, supabaseRequest } from "../lib/supabase";
 import { evaluatePCOS, evaluateSymptomTriage, type PCOSScreeningInput, type SymptomTriageInput } from "../lib/screening";
 import { generateSitaResponse, extractStructuredMedicalDocument } from "../lib/ai-service";
-import { classifyQueryIntents, retrieveUserHealthData, buildPersonalHealthContext } from "../lib/health-context";
+import { retrievePersonalHealthMemoryRAG } from "../lib/health-memory";
 import { randomUUID } from "node:crypto";
 
 const router: IRouter = Router();
@@ -92,23 +92,22 @@ router.post("/chat", async (req: Request, res: any): Promise<void> => {
       }
     }
 
-    // 2. Intelligent Domain Intent Classification
-    const intents = classifyQueryIntents(text, !!assessmentId, !!extractedDoc);
+    // 2. Personal Health Memory RAG Layer (Deterministic query classification + RLS-isolated scoped retrieval)
+    const ragResult = await retrievePersonalHealthMemoryRAG(token, text, {
+      assessmentId,
+      extractedDoc,
+    });
+    const intents = ragResult.intents;
+    const relevanceSummary = ragResult.relevanceSummary;
 
-    // 3. Selective Context Retrieval from Supabase (Strictly isolated by user JWT & RLS)
-    const userRecords = await retrieveUserHealthData(token, intents, assessmentId);
-
-    // 4. Build Structured Personal Health Context for SITA
-    const { contextPrompt, relevanceSummary } = buildPersonalHealthContext(userRecords, intents, extractedDoc);
-
-    // 5. Compose Concise, Safety-Grounded System Instruction
+    // 3. Compose Safety-Grounded System Instruction with Compact RAG Context
     const systemInstruction = `You are SITA, an empathetic women's health companion with SITA Personal Health Memory.
 - Grounding: When answering about cycle, symptoms, medications, or lab values, cite the user's confirmed records.
 - Zero Hallucination: State only facts in the user's records. Do not invent dates or values.
 - Safety: Provide educational support and empathetic guidance; never declare definitive diagnoses. Advise in-person medical care for red flags (severe pain, hemorrhage, high fever).
 - Tone: Warm, clear, concise, and clinically responsible.
 
-${contextPrompt}`;
+${ragResult.contextPrompt}`;
 
     // 6. Fetch recent conversation history from Supabase (Limit to 6 most recent, chronological)
     let history: any[] = [];
