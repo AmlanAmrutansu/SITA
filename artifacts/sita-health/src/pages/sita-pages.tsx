@@ -58,6 +58,16 @@ import { useSitaStore, type CycleLogItem } from '@/data/store';
 import { api, type PCOSScreeningInput, type SymptomTriageInput } from '@/lib/api';
 import { analyzeHealthPatterns } from '@/lib/pattern-radar';
 import { calculateCycleSummary, calculatePregnancyStats, calculatePostpartumStats, formatDate } from '@/lib/cycle';
+import {
+  fetchPregnancyRecommendations,
+  fetchPostpartumRecommendations,
+  recordRecommendationInteraction,
+  type RecommendationEngineResult,
+} from '@/lib/recommendations';
+import { PersonalizedNutritionCard } from '@/components/PersonalizedNutritionCard';
+import { DailyActivityCard } from '@/components/DailyActivityCard';
+import { DailyProgressCard } from '@/components/DailyProgressCard';
+import { PregnancyFoodSafetyModal } from '@/components/PregnancyFoodSafetyModal';
 
 function PageTitle({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: ReactNode }) {
   return (
@@ -1768,7 +1778,87 @@ export function PregnancyPage() {
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentDoctor, setAppointmentDoctor] = useState('Dr. Anita Rao');
 
+  // Personalized Recommendation states
+  const [recommendationResult, setRecommendationResult] = useState<RecommendationEngineResult | null>(null);
+  const [isLoadingRecs, setIsLoadingRecs] = useState(true);
+  const [isFoodSafetyModalOpen, setIsFoodSafetyModalOpen] = useState(false);
+  const [isSubmittingAction, setIsSubmittingAction] = useState(false);
+
   const stats = calculatePregnancyStats(pregnancyData.due_date, pregnancyData.pregnancy_start_date);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadRecommendations() {
+      try {
+        setIsLoadingRecs(true);
+        const data = await fetchPregnancyRecommendations();
+        if (isMounted) {
+          setRecommendationResult(data);
+        }
+      } catch (err) {
+        console.error('Failed to load pregnancy recommendations:', err);
+      } finally {
+        if (isMounted) setIsLoadingRecs(false);
+      }
+    }
+    loadRecommendations();
+    return () => {
+      isMounted = false;
+    };
+  }, [pregnancyData.due_date, pregnancyData.pregnancy_start_date]);
+
+  const handleRecommendationAction = async (params: {
+    recommendationId: string;
+    itemName: string;
+    category: 'nutrition' | 'activity';
+    action: 'ate' | 'completed' | 'skipped' | 'not_available';
+  }) => {
+    try {
+      setIsSubmittingAction(true);
+      // Optimistic state update
+      setRecommendationResult((prev) => {
+        if (!prev) return prev;
+        const todayStr = new Date().toISOString().split('T')[0];
+        const updated = prev.interactionsToday.filter(
+          (i) =>
+            !(
+              i.recommendationId === params.recommendationId &&
+              i.itemName === params.itemName &&
+              i.recommendationDate === todayStr
+            )
+        );
+        updated.push({
+          id: `temp-${Date.now()}`,
+          recommendationId: params.recommendationId,
+          itemName: params.itemName,
+          recommendationDate: todayStr,
+          mode: 'pregnancy',
+          category: params.category,
+          action: params.action,
+          createdAt: new Date().toISOString(),
+        });
+        return { ...prev, interactionsToday: updated };
+      });
+
+      const res = await recordRecommendationInteraction({
+        recommendation_id: params.recommendationId,
+        item_name: params.itemName,
+        mode: 'pregnancy',
+        category: params.category,
+        action: params.action,
+      });
+
+      if (res?.interactionsToday) {
+        setRecommendationResult((prev) =>
+          prev ? { ...prev, interactionsToday: res.interactionsToday } : prev
+        );
+      }
+    } catch (error) {
+      console.error('Failed to save recommendation interaction:', error);
+    } finally {
+      setIsSubmittingAction(false);
+    }
+  };
 
   const handleAddAppointment = async (e: FormEvent) => {
     e.preventDefault();
@@ -1855,6 +1945,101 @@ export function PregnancyPage() {
           </p>
         </Card>
       </div>
+
+      {/* Daily Progress Checklist */}
+      {recommendationResult && (
+        <div className="mt-6">
+          <DailyProgressCard
+            mode="pregnancy"
+            nutritionRecommendations={recommendationResult.nutritionRecommendations}
+            activityRecommendation={recommendationResult.activityRecommendation}
+            interactionsToday={recommendationResult.interactionsToday}
+          />
+        </div>
+      )}
+
+      {/* Pregnancy Food Safety Section */}
+      <div className="mt-6">
+        <div className="bg-gradient-to-r from-rose-50/70 via-amber-50/50 to-white rounded-2xl border border-rose-200/70 p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-800 flex items-center justify-center shrink-0 shadow-xs">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Pregnancy Food Safety</h3>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Protect yourself and your baby with clinically vetted food handling rules, foods to avoid, and safe preparation steps.
+              </p>
+            </div>
+          </div>
+          <button
+            id="open-food-safety-modal-btn"
+            onClick={() => setIsFoodSafetyModalOpen(true)}
+            className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold border border-slate-200/90 shadow-xs flex items-center gap-1.5 transition-all hover:border-slate-300 shrink-0"
+          >
+            <Utensils className="w-4 h-4 text-rose-600" />
+            View Food Safety Guide
+          </button>
+        </div>
+      </div>
+
+      {/* Your Personalized Nutrition Section */}
+      <div className="mt-7 space-y-4">
+        <div>
+          <h2 className="font-display text-xl text-[#594354]">Your Personalized Nutrition</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {recommendationResult?.summaryMessage || 'Grounded in your documented clinical records and pregnancy stage.'}
+          </p>
+        </div>
+
+        {isLoadingRecs ? (
+          <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-2">
+            <div className="w-8 h-8 mx-auto border-2 border-slate-200 border-t-emerald-600 rounded-full animate-spin"></div>
+            <p className="text-xs text-slate-500">Loading personalized nutrition recommendations...</p>
+          </div>
+        ) : recommendationResult?.nutritionRecommendations?.length ? (
+          <div className="space-y-4">
+            {recommendationResult.nutritionRecommendations.map((rec) => (
+              <PersonalizedNutritionCard
+                key={rec.id}
+                recommendation={rec}
+                interactionsToday={recommendationResult.interactionsToday}
+                onAction={handleRecommendationAction}
+                isSubmitting={isSubmittingAction}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 text-xs text-slate-600">
+            Personalized recommendations are currently updating. Your general pregnancy dashboard continues to be active.
+          </div>
+        )}
+      </div>
+
+      {/* Today's Activity Section */}
+      <div className="mt-7 space-y-4">
+        <div>
+          <h2 className="font-display text-xl text-[#594354]">Today's Activity</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Gentle, stage-appropriate movement tailored to your pregnancy milestones and health safety.
+          </p>
+        </div>
+
+        {recommendationResult?.activityRecommendation && (
+          <DailyActivityCard
+            recommendation={recommendationResult.activityRecommendation}
+            interactionsToday={recommendationResult.interactionsToday}
+            onAction={handleRecommendationAction}
+            isSubmitting={isSubmittingAction}
+          />
+        )}
+      </div>
+
+      {/* Pregnancy Food Safety Modal */}
+      <PregnancyFoodSafetyModal
+        isOpen={isFoodSafetyModalOpen}
+        onClose={() => setIsFoodSafetyModalOpen(false)}
+      />
 
       {/* Kick Counter Modal */}
       <Modal isOpen={activeModal === 'Kick Counter'} onClose={() => setActiveModal(null)} title="Kick Counter">
@@ -1994,8 +2179,86 @@ export function PostpartumPage() {
   const [kegelActive, setKegelActive] = useState(false);
   const [kegelPhase, setKegelPhase] = useState<'Squeeze' | 'Relax'>('Squeeze');
 
+  // Personalized Recommendation states
+  const [recommendationResult, setRecommendationResult] = useState<RecommendationEngineResult | null>(null);
+  const [isLoadingRecs, setIsLoadingRecs] = useState(true);
+  const [isSubmittingAction, setIsSubmittingAction] = useState(false);
+
   const displayName = profile?.display_name || '';
   const stats = calculatePostpartumStats(postpartumData.birth_date);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadRecommendations() {
+      try {
+        setIsLoadingRecs(true);
+        const data = await fetchPostpartumRecommendations();
+        if (isMounted) {
+          setRecommendationResult(data);
+        }
+      } catch (err) {
+        console.error('Failed to load postpartum recommendations:', err);
+      } finally {
+        if (isMounted) setIsLoadingRecs(false);
+      }
+    }
+    loadRecommendations();
+    return () => {
+      isMounted = false;
+    };
+  }, [postpartumData.birth_date]);
+
+  const handleRecommendationAction = async (params: {
+    recommendationId: string;
+    itemName: string;
+    category: 'nutrition' | 'activity';
+    action: 'ate' | 'completed' | 'skipped' | 'not_available';
+  }) => {
+    try {
+      setIsSubmittingAction(true);
+      setRecommendationResult((prev) => {
+        if (!prev) return prev;
+        const todayStr = new Date().toISOString().split('T')[0];
+        const updated = prev.interactionsToday.filter(
+          (i) =>
+            !(
+              i.recommendationId === params.recommendationId &&
+              i.itemName === params.itemName &&
+              i.recommendationDate === todayStr
+            )
+        );
+        updated.push({
+          id: `temp-${Date.now()}`,
+          recommendationId: params.recommendationId,
+          itemName: params.itemName,
+          recommendationDate: todayStr,
+          mode: 'postpartum',
+          category: params.category,
+          action: params.action,
+          createdAt: new Date().toISOString(),
+        });
+        return { ...prev, interactionsToday: updated };
+      });
+
+      const res = await recordRecommendationInteraction({
+        recommendation_id: params.recommendationId,
+        item_name: params.itemName,
+        mode: 'postpartum',
+        category: params.category,
+        action: params.action,
+      });
+
+      if (res?.interactionsToday) {
+        setRecommendationResult((prev) =>
+          prev ? { ...prev, interactionsToday: res.interactionsToday } : prev
+        );
+      }
+    } catch (error) {
+      console.error('Failed to save postpartum interaction:', error);
+    } finally {
+      setIsSubmittingAction(false);
+    }
+  };
 
   // Kegel animation timer loop
   useEffect(() => {
@@ -2124,6 +2387,70 @@ export function PostpartumPage() {
             </div>
           </Card>
         </div>
+      </div>
+
+      {/* Daily Progress Checklist */}
+      {recommendationResult && (
+        <div className="mt-6">
+          <DailyProgressCard
+            mode="postpartum"
+            nutritionRecommendations={recommendationResult.nutritionRecommendations}
+            activityRecommendation={recommendationResult.activityRecommendation}
+            interactionsToday={recommendationResult.interactionsToday}
+          />
+        </div>
+      )}
+
+      {/* Your Recovery Nutrition Section */}
+      <div className="mt-7 space-y-4">
+        <div>
+          <h2 className="font-display text-xl text-[#594354]">Your Recovery Nutrition</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {recommendationResult?.summaryMessage || 'Nourishing whole foods tailored to your tissue healing and recovery stage.'}
+          </p>
+        </div>
+
+        {isLoadingRecs ? (
+          <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-2">
+            <div className="w-8 h-8 mx-auto border-2 border-slate-200 border-t-pink-600 rounded-full animate-spin"></div>
+            <p className="text-xs text-slate-500">Loading personalized recovery nutrition...</p>
+          </div>
+        ) : recommendationResult?.nutritionRecommendations?.length ? (
+          <div className="space-y-4">
+            {recommendationResult.nutritionRecommendations.map((rec) => (
+              <PersonalizedNutritionCard
+                key={rec.id}
+                recommendation={rec}
+                interactionsToday={recommendationResult.interactionsToday}
+                onAction={handleRecommendationAction}
+                isSubmitting={isSubmittingAction}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 text-xs text-slate-600">
+            Personalized recovery recommendations are updating.
+          </div>
+        )}
+      </div>
+
+      {/* Today's Recovery Activity Section */}
+      <div className="mt-7 space-y-4">
+        <div>
+          <h2 className="font-display text-xl text-[#594354]">Today's Recovery Activity</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Gentle restorative movement tailored to your postpartum stage and clinical recovery.
+          </p>
+        </div>
+
+        {recommendationResult?.activityRecommendation && (
+          <DailyActivityCard
+            recommendation={recommendationResult.activityRecommendation}
+            interactionsToday={recommendationResult.interactionsToday}
+            onAction={handleRecommendationAction}
+            isSubmitting={isSubmittingAction}
+          />
+        )}
       </div>
 
       {/* Pelvic Floor Kegel Trainer Modal */}
